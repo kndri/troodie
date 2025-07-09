@@ -1,0 +1,124 @@
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
+import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useOnboarding } from '@/contexts/OnboardingContext';
+
+export default function WelcomeScreen() {
+  const router = useRouter();
+  const { setCurrentStep } = useOnboarding();
+
+  const handleGetStarted = () => {
+    setCurrentStep('signup');
+    router.push('/onboarding/signup');
+  };
+
+  const handleLogin = () => {
+    router.push('/onboarding/login');
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar style="dark" />
+      <View style={styles.content}>
+        <View style={styles.logoContainer}>
+          <Text style={styles.logoText}>Troodie</Text>
+          <View style={styles.logoEmoji}>
+            <Text style={styles.emojiText}>🍕</Text>
+          </View>
+        </View>
+
+        <View style={styles.middleContent}>
+          <Text style={styles.title}>Discover Your Perfect</Text>
+          <Text style={styles.title}>Dining Experience</Text>
+        </View>
+
+        <View style={styles.bottomContent}>
+          <TouchableOpacity style={styles.getStartedButton} onPress={handleGetStarted}>
+            <Text style={styles.getStartedText}>GET STARTED</Text>
+          </TouchableOpacity>
+
+          <View style={styles.loginContainer}>
+            <Text style={styles.loginText}>Already have an account? </Text>
+            <TouchableOpacity onPress={handleLogin}>
+              <Text style={styles.loginLink}>Log in</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFDF7',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+    justifyContent: 'space-between',
+  },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 60,
+  },
+  logoText: {
+    fontSize: 32,
+    fontFamily: 'Poppins_700Bold',
+    color: '#333',
+  },
+  logoEmoji: {
+    backgroundColor: '#FFAD27',
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  emojiText: {
+    fontSize: 24,
+  },
+  middleContent: {
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 32,
+    fontFamily: 'Poppins_700Bold',
+    color: '#333',
+    textAlign: 'center',
+    lineHeight: 40,
+  },
+  bottomContent: {
+    marginBottom: 40,
+  },
+  getStartedButton: {
+    backgroundColor: '#FFAD27',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  getStartedText: {
+    fontSize: 16,
+    fontFamily: 'Poppins_600SemiBold',
+    color: '#FFFFFF',
+  },
+  loginContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 20,
+  },
+  loginText: {
+    fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+    color: '#666',
+  },
+  loginLink: {
+    fontSize: 14,
+    fontFamily: 'Inter_500Medium',
+    color: '#007AFF',
+  },
+});
