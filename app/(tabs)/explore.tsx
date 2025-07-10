@@ -1,110 +1,337 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { ExplorePostCard } from '@/components/cards/ExplorePostCard';
+import { theme } from '@/constants/theme';
+import { ExploreFilter, ExplorePost } from '@/types/core';
+import { Search, SlidersHorizontal } from 'lucide-react-native';
+import React, { useState } from 'react';
+import {
+    RefreshControl,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from 'react-native';
+import { FlatGrid } from 'react-native-super-grid';
 
-import { Collapsible } from '@/components/Collapsible';
-import { ExternalLink } from '@/components/ExternalLink';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+export default function ExploreScreen() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<ExploreFilter>('All');
+  const [refreshing, setRefreshing] = useState(false);
 
-export default function TabTwoScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
+  const filters: ExploreFilter[] = ['All', 'Friends', 'Trending', 'Nearby', 'New', 'Top Rated'];
+
+  // Mock data for explore posts
+  const explorePosts: ExplorePost[] = [
+    {
+      id: 1,
+      restaurant: {
+        id: 1,
+        name: 'Sakura Omakase',
+        image: 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=800',
+        cuisine: 'Japanese',
+        rating: 4.9,
+        location: 'East Village',
+        priceRange: '$$$$',
+      },
+      user: {
+        id: 1,
+        name: 'Sarah Chen',
+        username: 'sarahchen',
+        avatar: 'https://i.pravatar.cc/150?img=1',
+        persona: 'Luxe Planner',
+        verified: true,
+        followers: 1247
+      },
+      socialProof: {
+        friendsVisited: ['Emma Wilson', 'Mike Rodriguez'],
+        friendsPhotos: [],
+        totalFriendVisits: 5,
+        mutualFriends: 3
+      },
+      photos: ['https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=800'],
+      engagement: {
+        likes: 273,
+        saves: 89,
+        comments: 41
+      },
+      trending: true,
+      caption: 'Perfect date night spot! The sunset views are incredible 😍',
+      time: '2 hours ago'
+    },
+    {
+      id: 2,
+      restaurant: {
+        id: 2,
+        name: 'RoofTop Garden',
+        image: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=800',
+        cuisine: 'Mediterranean',
+        rating: 4.7,
+        location: 'SoHo',
+        priceRange: '$$$',
+      },
+      user: {
+        id: 2,
+        name: 'Emma Wilson',
+        username: 'emmawilson',
+        avatar: 'https://i.pravatar.cc/150?img=2',
+        persona: 'Foodie Explorer',
+        verified: false,
+        followers: 892
+      },
+      socialProof: {
+        friendsVisited: [],
+        friendsPhotos: [],
+        totalFriendVisits: 0,
+        mutualFriends: 0
+      },
+      photos: ['https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=800'],
+      engagement: {
+        likes: 156,
+        saves: 62,
+        comments: 23
+      },
+      trending: false,
+      caption: 'Incredible omakase experience! Every course was perfection.',
+      time: '5 hours ago'
+    },
+    {
+      id: 3,
+      restaurant: {
+        id: 3,
+        name: 'Corner Coffee Co',
+        image: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800',
+        cuisine: 'Coffee & Brunch',
+        rating: 4.5,
+        location: 'Brooklyn',
+        priceRange: '$',
+      },
+      user: {
+        id: 3,
+        name: 'Mike Rodriguez',
+        username: 'mikerodriguez',
+        avatar: 'https://i.pravatar.cc/150?img=3',
+        persona: 'Local Explorer',
+        verified: true,
+        followers: 567
+      },
+      socialProof: {
+        friendsVisited: ['Sarah Chen'],
+        friendsPhotos: [],
+        totalFriendVisits: 2,
+        mutualFriends: 2
+      },
+      photos: ['https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800'],
+      engagement: {
+        likes: 89,
+        saves: 34,
+        comments: 12
+      },
+      trending: false,
+      caption: 'Best coffee in Brooklyn! Their pastries are also worth the trip.',
+      time: '1 day ago'
+    },
+    {
+      id: 4,
+      restaurant: {
+        id: 4,
+        name: 'The Italian Place',
+        image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800',
+        cuisine: 'Italian',
+        rating: 4.8,
+        location: 'West Village',
+        priceRange: '$$$',
+      },
+      user: {
+        id: 4,
+        name: 'Alex Kim',
+        username: 'alexkim',
+        avatar: 'https://i.pravatar.cc/150?img=4',
+        persona: 'Culinary Adventurer',
+        verified: false,
+        followers: 423
+      },
+      socialProof: {
+        friendsVisited: ['Emma Wilson', 'Sarah Chen', 'Mike Rodriguez'],
+        friendsPhotos: [],
+        totalFriendVisits: 8,
+        mutualFriends: 5
+      },
+      photos: ['https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800'],
+      engagement: {
+        likes: 342,
+        saves: 128,
+        comments: 56
+      },
+      trending: true,
+      caption: 'Authentic pasta that reminds me of Italy! Must-try: truffle ravioli',
+      time: '3 days ago'
+    },
+  ];
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1500);
+  };
+
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <Text style={styles.title}>Explore</Text>
+      <Text style={styles.subtitle}>Discover through your network</Text>
+      
+      <View style={styles.searchContainer}>
+        <Search size={20} color="#999" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search restaurants, friends, or cuisines..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholderTextColor="#999"
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Explore</ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image source={require('@/assets/images/react-logo.png')} style={{ alignSelf: 'center' }} />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Custom fonts">
-        <ThemedText>
-          Open <ThemedText type="defaultSemiBold">app/_layout.tsx</ThemedText> to see how to load{' '}
-          <ThemedText style={{ fontFamily: 'SpaceMono' }}>
-            custom fonts such as this one.
-          </ThemedText>
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/versions/latest/sdk/font">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful <ThemedText type="defaultSemiBold">react-native-reanimated</ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+        <TouchableOpacity style={styles.filterButton}>
+          <SlidersHorizontal size={20} color="#333" />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false} 
+        style={styles.filtersContainer}
+        contentContainerStyle={styles.filtersContent}
+      >
+        {filters.map((filter) => (
+          <TouchableOpacity
+            key={filter}
+            style={[
+              styles.filterPill,
+              activeFilter === filter && styles.filterPillActive
+            ]}
+            onPress={() => setActiveFilter(filter)}
+          >
+            <Text style={[
+              styles.filterText,
+              activeFilter === filter && styles.filterTextActive
+            ]}>
+              {filter}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <FlatGrid
+        ListHeaderComponent={renderHeader}
+        itemDimension={150}
+        data={explorePosts}
+        style={styles.gridView}
+        spacing={12}
+        renderItem={({ item }) => (
+          <ExplorePostCard
+            post={item}
+            onPress={() => {}}
+            onLike={() => {}}
+            onComment={() => {}}
+            onSave={() => {}}
+          />
+        )}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.colors.primary}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
   },
-  titleContainer: {
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 16,
+  },
+  title: {
+    fontSize: 28,
+    fontFamily: 'Poppins_700Bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 16,
+    fontFamily: 'Inter_400Regular',
+    color: '#666',
+    marginBottom: 16,
+  },
+  searchContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 48,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+    marginBottom: 16,
+  },
+  searchIcon: {
+    marginRight: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: 'Inter_400Regular',
+    color: '#333',
+  },
+  filterButton: {
+    padding: 8,
+    marginLeft: 8,
+  },
+  filtersContainer: {
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
+  },
+  filtersContent: {
+    paddingRight: 40,
     gap: 8,
+  },
+  filterPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F0F0F0',
+    marginRight: 8,
+  },
+  filterPillActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  filterText: {
+    fontSize: 14,
+    fontFamily: 'Inter_500Medium',
+    color: '#666',
+  },
+  filterTextActive: {
+    color: '#FFFFFF',
+  },
+  gridView: {
+    flex: 1,
   },
 });
