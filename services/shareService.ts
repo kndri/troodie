@@ -51,20 +51,32 @@ export class ShareService {
   }
   
   static generateDeepLink(content: ShareContent): string {
-    // Use the linking configuration to generate proper URLs
-    const baseUrl = 'https://troodie.app';
+    // For development, use Expo's linking
+    // For production, you'd use your actual domain
+    const baseUrl = __DEV__ 
+      ? Linking.createURL('/') // Creates exp:// or http://localhost URLs
+      : 'https://troodie.app';
     
     switch (content.type) {
       case 'board':
-        return `${baseUrl}/boards/${content.id}`;
+        return __DEV__ 
+          ? Linking.createURL(`/boards/${content.id}`)
+          : `${baseUrl}/boards/${content.id}`;
       case 'post':
-        return `${baseUrl}/posts/${content.id}`;
+        return __DEV__
+          ? Linking.createURL(`/posts/${content.id}`)
+          : `${baseUrl}/posts/${content.id}`;
       case 'profile':
-        return content.username 
-          ? `${baseUrl}/u/${content.username}` 
-          : `${baseUrl}/profile/${content.id}`;
+        const profilePath = content.username 
+          ? `/u/${content.username}` 
+          : `/profile/${content.id}`;
+        return __DEV__
+          ? Linking.createURL(profilePath)
+          : `${baseUrl}${profilePath}`;
       case 'restaurant':
-        return `${baseUrl}/restaurants/${content.id}`;
+        return __DEV__
+          ? Linking.createURL(`/restaurants/${content.id}`)
+          : `${baseUrl}/restaurants/${content.id}`;
       default:
         return baseUrl;
     }
