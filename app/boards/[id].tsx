@@ -30,6 +30,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { ShareButton } from '@/components/ShareButton';
 
 export default function BoardDetailScreen() {
   const router = useRouter();
@@ -93,7 +94,7 @@ export default function BoardDetailScreen() {
   };
 
   const handleShareBoard = () => {
-    Alert.alert('Share Board', 'Sharing feature coming soon!');
+    // Handled by ShareButton component
   };
 
   const handleEditBoard = () => {
@@ -166,9 +167,19 @@ export default function BoardDetailScreen() {
         </Text>
       </View>
       <View style={styles.headerActions}>
-        <TouchableOpacity style={styles.headerButton} onPress={handleShareBoard}>
-          <Share2 size={18} color={theme.colors.text.dark} />
-        </TouchableOpacity>
+        {board && (
+          <ShareButton
+            content={{
+              type: 'board',
+              id: board.id,
+              title: board.title,
+              description: board.description || `${board.restaurant_count || 0} amazing places`,
+            }}
+            style={styles.headerButton}
+            iconSize={18}
+            iconColor={theme.colors.text.dark}
+          />
+        )}
         {isOwner && (
           <TouchableOpacity 
             style={styles.headerButton}

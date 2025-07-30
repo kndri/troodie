@@ -825,27 +825,45 @@ CREATE TABLE public.push_tokens (
 ### Share Analytics
 
 #### `share_analytics` Table
-Track sharing activity for boards, posts, and profiles.
+Track sharing activity for boards, posts, profiles, and restaurants.
 
 ```sql
 CREATE TABLE IF NOT EXISTS share_analytics (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES users(id),
-  content_type VARCHAR NOT NULL CHECK (content_type IN ('board', 'post', 'profile')),
+  content_type VARCHAR NOT NULL CHECK (content_type IN ('board', 'post', 'profile', 'restaurant')),
   content_id UUID NOT NULL,
-  platform VARCHAR,
+  action VARCHAR NOT NULL CHECK (action IN ('initiated', 'completed')),
+  platform VARCHAR CHECK (platform IN ('ios', 'android', 'web')),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Add share count columns to existing tables
-ALTER TABLE posts ADD COLUMN IF NOT EXISTS share_count INTEGER DEFAULT 0;
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS shares_count INTEGER DEFAULT 0;
 ALTER TABLE boards ADD COLUMN IF NOT EXISTS share_count INTEGER DEFAULT 0;
+
+-- Create trigger to auto-increment share counts
+CREATE OR REPLACE FUNCTION increment_share_count()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.action = 'completed' THEN
+    CASE NEW.content_type
+      WHEN 'post' THEN
+        UPDATE posts SET shares_count = shares_count + 1 WHERE id = NEW.content_id;
+      WHEN 'board' THEN
+        UPDATE boards SET share_count = share_count + 1 WHERE id = NEW.content_id;
+    END CASE;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 ```
 
 **Usage**:
-- Track when users share content via system share sheet
-- Analyze popular content based on share metrics
-- Platform field captures where content was shared (if available)
+- Track share initiation vs completion for analytics
+- Platform-specific share metrics (iOS, Android, Web)
+- Automatic share count increments via trigger
+- Calculate viral coefficient and share conversion rates
 
 ### Achievement & Gamification
 

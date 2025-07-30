@@ -1,5 +1,6 @@
 import { BoardSelectionModal } from '@/components/BoardSelectionModal';
 import { ErrorState } from '@/components/ErrorState';
+import { ShareButton } from '@/components/ShareButton';
 import { designTokens } from '@/constants/designTokens';
 import { useAuth } from '@/contexts/AuthContext';
 import { restaurantService } from '@/services/restaurantService';
@@ -227,9 +228,20 @@ export default function RestaurantDetailScreen() {
           <ArrowLeft size={20} color="white" />
         </TouchableOpacity>
         <View style={styles.rightActions}>
-          <TouchableOpacity style={styles.headerButton} onPress={() => {}}>
-            <Share size={20} color="white" />
-          </TouchableOpacity>
+          {restaurant && (
+            <ShareButton
+              content={{
+                type: 'restaurant',
+                id: restaurant.id,
+                title: restaurant.name,
+                description: `${restaurant.cuisine_types?.[0] || 'Restaurant'} in ${restaurant.city || 'your area'}`,
+                imageUrl: restaurantService.getRestaurantImage(restaurant),
+              }}
+              style={styles.headerButton}
+              iconSize={20}
+              iconColor="white"
+            />
+          )}
           <TouchableOpacity style={styles.headerButton} onPress={() => {}}>
             <Camera size={20} color="white" />
           </TouchableOpacity>

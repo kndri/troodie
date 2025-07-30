@@ -3,6 +3,7 @@ import { ProfilePostCard } from '@/components/cards/ProfilePostCard';
 import { RestaurantCard } from '@/components/cards/RestaurantCard';
 import { EditProfileModal } from '@/components/modals/EditProfileModal';
 import SettingsModal from '@/components/modals/SettingsModal';
+import { ShareButton } from '@/components/ShareButton';
 import { designTokens } from '@/constants/designTokens';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -205,14 +206,7 @@ export default function ProfileScreen() {
   };
 
   const handleShareProfile = async () => {
-    if (!profile) return;
-    
-    try {
-      // TODO: Implement share functionality
-      // Share profile
-    } catch (error) {
-      console.error('Error sharing profile:', error);
-    }
+    // Handled by ShareButton component
   };
 
   const handlePostPress = (postId: string) => {
@@ -364,10 +358,20 @@ export default function ProfileScreen() {
           <PenLine size={10} color={designTokens.colors.primaryOrange} />
           <Text style={styles.editProfileText}>Edit Profile</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.shareButton} onPress={handleShareProfile}>
-          <Share2 size={10} color={designTokens.colors.textMedium} />
-          <Text style={styles.shareButtonText}>Share</Text>
-        </TouchableOpacity>
+        {profile && user && (
+          <ShareButton
+            content={{
+              type: 'profile',
+              id: user.id,
+              title: profile.name || profile.username || 'User',
+              description: profile.bio || 'Check out my profile on Troodie',
+              username: profile.username,
+              imageUrl: profile.avatar_url,
+            }}
+            variant="button"
+            style={styles.shareButton}
+          />
+        )}
       </View>
     </View>
   );

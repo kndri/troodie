@@ -13,6 +13,7 @@ import {
     View,
 } from 'react-native';
 import { ExternalContentPreview } from './posts/ExternalContentPreview';
+import { ShareButton } from './ShareButton';
 
 interface PostCardProps {
   post: PostWithUser;
@@ -265,10 +266,21 @@ export function PostCard({
             <Text style={styles.actionCount}>{savesCount}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
-            <Ionicons name="share-outline" size={20} color={designTokens.colors.textMedium} />
+          <View style={styles.actionButton}>
+            <ShareButton
+              content={{
+                type: 'post',
+                id: post.id,
+                title: `${post.user.name || post.user.username}'s post`,
+                description: post.caption || 'Check out this post on Troodie',
+                imageUrl: post.photos?.[0],
+              }}
+              iconSize={20}
+              iconColor={designTokens.colors.textMedium}
+              showLabel={false}
+            />
             <Text style={styles.actionCount}>{post.shares_count}</Text>
-          </TouchableOpacity>
+          </View>
         </View>
       )}
     </TouchableOpacity>

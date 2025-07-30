@@ -628,25 +628,28 @@ export type Database = {
         Row: {
           id: string
           user_id: string | null
-          content_type: 'board' | 'post' | 'profile'
+          content_type: 'board' | 'post' | 'profile' | 'restaurant'
           content_id: string
-          platform: string | null
+          action: 'initiated' | 'completed'
+          platform: 'ios' | 'android' | 'web' | null
           created_at: string
         }
         Insert: {
           id?: string
           user_id?: string | null
-          content_type: 'board' | 'post' | 'profile'
+          content_type: 'board' | 'post' | 'profile' | 'restaurant'
           content_id: string
-          platform?: string | null
+          action: 'initiated' | 'completed'
+          platform?: 'ios' | 'android' | 'web' | null
           created_at?: string
         }
         Update: {
           id?: string
           user_id?: string | null
-          content_type?: 'board' | 'post' | 'profile'
+          content_type?: 'board' | 'post' | 'profile' | 'restaurant'
           content_id?: string
-          platform?: string | null
+          action?: 'initiated' | 'completed'
+          platform?: 'ios' | 'android' | 'web' | null
           created_at?: string
         }
       }
