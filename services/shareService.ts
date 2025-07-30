@@ -40,11 +40,8 @@ export class ShareService {
         UTI: 'public.plain-text',
       });
       
-      // Track successful share
+      // Track successful share (this will trigger automatic increment via database trigger)
       await this.trackShareEvent(content, 'completed');
-      
-      // Increment share count
-      await this.incrementShareCount(content);
       
       return true;
     } catch (error) {
@@ -130,31 +127,6 @@ export class ShareService {
       });
     } catch (error) {
       console.error('Error tracking share event:', error);
-    }
-  }
-  
-  private static async incrementShareCount(content: ShareContent): Promise<void> {
-    try {
-      // Update share count based on content type
-      switch (content.type) {
-        case 'post':
-          await supabase
-            .from('posts')
-            .update({ shares_count: supabase.raw('shares_count + 1') })
-            .eq('id', content.id);
-          break;
-          
-        case 'board':
-          await supabase
-            .from('boards')
-            .update({ share_count: supabase.raw('share_count + 1') })
-            .eq('id', content.id);
-          break;
-          
-        // Profile and restaurant shares are tracked but don't have counts
-      }
-    } catch (error) {
-      console.error('Error incrementing share count:', error);
     }
   }
   
