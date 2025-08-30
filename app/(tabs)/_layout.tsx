@@ -5,8 +5,8 @@ import { Platform, StyleSheet, TouchableOpacity } from 'react-native';
 
 import { HapticTab } from '@/components/HapticTab';
 import TabBarBackground from '@/components/ui/TabBarBackground';
+import { compactDesign, designTokens } from '@/constants/designTokens';
 import { theme } from '@/constants/theme';
-import { designTokens, compactDesign } from '@/constants/designTokens';
 import { useRouter } from 'expo-router';
 
 export default function TabLayout() {

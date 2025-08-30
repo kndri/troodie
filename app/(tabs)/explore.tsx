@@ -4,6 +4,7 @@ import { PostCard } from '@/components/PostCard';
 import { RestaurantCard } from '@/components/cards/RestaurantCard';
 import { AddRestaurantModal } from '@/components/AddRestaurantModal';
 import { compactDesign, designTokens } from '@/constants/designTokens';
+import { DS } from '@/components/design-system/tokens';
 import { useAuth } from '@/contexts/AuthContext';
 import { postService } from '@/services/postService';
 import { restaurantService } from '@/services/restaurantService';
@@ -200,17 +201,17 @@ export default function ExploreScreen() {
             style={styles.iconButton}
             onPress={() => router.push('/find-friends')}
           >
-            <Users size={compactDesign.icon.small} color={designTokens.colors.textLight} />
+            <Users size={20} color={DS.colors.textGray} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton}>
-            <SlidersHorizontal size={compactDesign.icon.small} color={designTokens.colors.textLight} />
+            <SlidersHorizontal size={20} color={DS.colors.textGray} />
           </TouchableOpacity>
         </View>
       </View>
       
       {/* Compact Search Bar */}
       <View style={[styles.searchBar, searchFocused && styles.searchBarFocused]}>
-        <Search size={compactDesign.icon.small} color={designTokens.colors.textLight} />
+        <Search size={16} color={DS.colors.textGray} />
         <TextInput
           style={styles.searchInput}
           placeholder={`Search ${activeTab}...`}
@@ -332,7 +333,7 @@ export default function ExploreScreen() {
             onPress={() => setShowAddRestaurantModal(true)}
             activeOpacity={0.8}
           >
-            <Plus size={compactDesign.icon.small} color="#FFFFFF" />
+            <Plus size={16} color={DS.colors.textWhite} />
             <Text style={styles.addRestaurantButtonText}>Add Restaurant</Text>
           </TouchableOpacity>
         )}
@@ -366,7 +367,7 @@ export default function ExploreScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={designTokens.colors.primaryOrange}
+            tintColor={DS.colors.primaryOrange}
           />
         }
         contentContainerStyle={styles.listContent}
@@ -397,128 +398,127 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: DS.colors.background,
   },
   header: {
-    backgroundColor: '#FFFFFF',
-    paddingBottom: compactDesign.content.gap,
+    backgroundColor: DS.colors.surface,
+    paddingBottom: DS.spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: designTokens.colors.borderLight,
+    borderBottomColor: DS.colors.borderLight,
   },
   titleBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: compactDesign.header.paddingHorizontal,
-    paddingVertical: compactDesign.header.paddingVertical,
+    paddingHorizontal: DS.spacing.lg,
+    paddingVertical: DS.spacing.md,
   },
   title: {
-    ...designTokens.typography.sectionTitle,
-    color: designTokens.colors.textDark,
+    ...DS.typography.h2,
+    color: DS.colors.textDark,
   },
   headerActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: DS.spacing.sm,
   },
   iconButton: {
-    width: compactDesign.button.heightSmall,
-    height: compactDesign.button.heightSmall,
-    borderRadius: compactDesign.button.heightSmall / 2,
-    backgroundColor: designTokens.colors.backgroundGray,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: DS.colors.surfaceLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: designTokens.colors.backgroundGray,
-    marginHorizontal: compactDesign.content.padding,
-    marginBottom: compactDesign.content.gap,
-    paddingHorizontal: compactDesign.input.paddingHorizontal,
-    height: compactDesign.input.height,
-    borderRadius: designTokens.borderRadius.sm,
-    gap: 8,
+    backgroundColor: DS.colors.surfaceLight,
+    marginHorizontal: DS.spacing.lg,
+    marginBottom: DS.spacing.sm,
+    paddingHorizontal: DS.spacing.md,
+    height: 40,
+    borderRadius: DS.borderRadius.md,
+    gap: DS.spacing.sm,
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: DS.colors.transparent,
   },
   searchBarFocused: {
-    borderColor: designTokens.colors.primaryOrange,
-    backgroundColor: '#FFF',
+    borderColor: DS.colors.primaryOrange,
+    backgroundColor: DS.colors.surface,
   },
   searchInput: {
     flex: 1,
-    ...designTokens.typography.inputText,
-    color: designTokens.colors.textDark,
+    ...DS.typography.body,
+    color: DS.colors.textDark,
     padding: 0,
   },
   clearText: {
-    ...designTokens.typography.smallText,
-    color: designTokens.colors.primaryOrange,
+    ...DS.typography.caption,
+    color: DS.colors.primaryOrange,
     fontWeight: '600',
   },
   tabBar: {
     flexDirection: 'row',
-    paddingHorizontal: compactDesign.content.padding,
-    gap: 8,
+    paddingHorizontal: DS.spacing.lg,
+    gap: DS.spacing.sm,
   },
   tab: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: DS.spacing.sm,
     alignItems: 'center',
-    borderRadius: designTokens.borderRadius.sm,
-    backgroundColor: designTokens.colors.backgroundGray,
+    borderRadius: DS.borderRadius.sm,
+    backgroundColor: DS.colors.surfaceLight,
   },
   tabActive: {
-    backgroundColor: designTokens.colors.primaryOrange,
+    backgroundColor: DS.colors.primaryOrange,
   },
   tabText: {
-    ...designTokens.typography.filterText,
-    fontWeight: '600',
-    color: designTokens.colors.textMedium,
+    ...DS.typography.button,
+    color: DS.colors.textGray,
   },
   tabTextActive: {
-    color: '#FFFFFF',
+    color: DS.colors.textWhite,
   },
   listContent: {
-    paddingTop: 8,
-    paddingBottom: compactDesign.content.padding,
+    paddingTop: DS.spacing.sm,
+    paddingBottom: DS.spacing.lg,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 60,
+    paddingVertical: DS.spacing.xxxl,
   },
   emptyIcon: {
     fontSize: 48,
-    marginBottom: 16,
+    marginBottom: DS.spacing.lg,
   },
   emptyTitle: {
-    ...designTokens.typography.cardTitle,
-    color: designTokens.colors.textDark,
-    marginBottom: 8,
+    ...DS.typography.h3,
+    color: DS.colors.textDark,
+    marginBottom: DS.spacing.sm,
   },
   emptyText: {
-    ...designTokens.typography.bodyRegular,
-    color: designTokens.colors.textMedium,
+    ...DS.typography.body,
+    color: DS.colors.textGray,
     textAlign: 'center',
   },
   restaurantCardWrapper: {
-    paddingHorizontal: compactDesign.content.padding,
+    paddingHorizontal: DS.spacing.lg,
   },
   addRestaurantButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: designTokens.colors.primaryOrange,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: designTokens.borderRadius.md,
-    marginTop: 20,
-    gap: 8,
+    backgroundColor: DS.colors.primaryOrange,
+    paddingHorizontal: DS.spacing.xl,
+    paddingVertical: DS.spacing.md,
+    borderRadius: DS.borderRadius.full,
+    marginTop: DS.spacing.xl,
+    gap: DS.spacing.sm,
+    ...DS.shadows.sm,
   },
   addRestaurantButtonText: {
-    ...designTokens.typography.buttonText,
-    color: '#FFFFFF',
-    fontWeight: '600',
+    ...DS.typography.button,
+    color: DS.colors.textWhite,
   },
 });
