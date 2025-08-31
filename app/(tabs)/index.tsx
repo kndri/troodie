@@ -57,14 +57,24 @@ interface Story {
 
 export default function DiscoverScreen() {
   const router = useRouter();
-  const { user, isAuthenticated, isAnonymous } = useAuth();
+  const { user, isAuthenticated, isAnonymous, profile } = useAuth();
   const { userState } = useApp();
   
-  // State
-  const [selectedCity, setSelectedCity] = useState('Charlotte');
+  // State - use user's city or default
+  const [selectedCity, setSelectedCity] = useState(
+    profile?.city || userState.location?.city || 'Charlotte'
+  );
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showPersonalization, setShowPersonalization] = useState(true);
+  
+  // Helper function to get time-based greeting
+  const getTimeGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
   
   // Data states
   const [popularRestaurants, setPopularRestaurants] = useState<RestaurantInfo[]>([]);
@@ -92,14 +102,16 @@ export default function DiscoverScreen() {
         }
         setSavedStates(states);
 
-        // Fetch activity feed
+        // Fetch activity feed - get all activities to have data
         const { data: activities } = await activityFeedService.getActivityFeed(
           user.id,
           { 
-            filter: userState.friendsCount > 0 ? 'friends' : 'all',
-            limit: 10 
+            filter: 'all', // Get all activities, not just friends
+            limit: 20 
           }
         );
+        
+        // Set the activities directly - the service should return properly formatted data
         setRecentActivities(activities.slice(0, 10));
       } else {
         // For non-authenticated users, show global activity
@@ -107,51 +119,12 @@ export default function DiscoverScreen() {
           null,
           { 
             filter: 'all',
-            limit: 10 
+            limit: 20 
           }
         );
         
-        // Add some mock activities for better demo
-        const mockActivities = [
-          {
-            activity_id: 'mock-1',
-            activity_type: 'post',
-            actor_name: 'Ava',
-            target_name: 'Ramen Katsu',
-            rating: 5.0,
-            created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-          },
-          {
-            activity_id: 'mock-2', 
-            activity_type: 'save',
-            actor_name: 'Your reservation',
-            target_name: 'Sushi Mori',
-            created_at: new Date(Date.now() - 28 * 60 * 60 * 1000).toISOString(),
-          },
-          {
-            activity_id: 'mock-3',
-            activity_type: 'follow',
-            actor_name: 'Liam',
-            created_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-          },
-          {
-            activity_id: 'mock-4',
-            activity_type: 'trending',
-            created_at: new Date().toISOString(),
-          },
-          {
-            activity_id: 'mock-5',
-            activity_type: 'comment',
-            actor_name: 'Emma',
-            target_name: 'Pizzeria Bianco',
-            comment_text: 'Crisp crust, bright sauce — must try.',
-            created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          },
-        ];
-        
-        // Combine mock and real activities
-        const combinedActivities = [...mockActivities, ...globalFeed].slice(0, 10);
-        setGlobalActivities(combinedActivities);
+        // Use real global activities
+        setGlobalActivities(globalFeed.slice(0, 10));
       }
 
       // Mock stories data
@@ -261,7 +234,7 @@ export default function DiscoverScreen() {
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Discover</Text>
             <TouchableOpacity style={styles.locationRow} onPress={() => {}}>
-              <Text style={styles.locationText}>Good evening • East Village</Text>
+              <Text style={styles.locationText}>{getTimeGreeting()} • {selectedCity}</Text>
             </TouchableOpacity>
           </View>
           
@@ -302,9 +275,12 @@ export default function DiscoverScreen() {
         <View style={styles.activitySection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Activity</Text>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/activity')}>
+            <TouchableOpacity 
+              style={styles.seeAllContainer}
+              onPress={() => router.push('/(tabs)/activity')}
+            >
               <Text style={styles.seeAllButton}>See all</Text>
-              <ChevronRight size={16} color={DS.colors.primaryOrange} style={{ marginLeft: 4 }} />
+              <ChevronRight size={16} color={DS.colors.primaryOrange} />
             </TouchableOpacity>
           </View>
           
@@ -320,31 +296,47 @@ export default function DiscoverScreen() {
               
               switch (activity.activity_type) {
                 case 'post':
+                case 'review':
                   iconBg = '#FFF3E0';
                   iconColor = '#FFB800';
                   icon = <Star size={18} color={iconColor} fill={iconColor} />;
-                  primaryText = `${activity.actor_name} rated ${activity.target_name || 'a place'} ${activity.rating || 5.0}`;
-                  secondaryText = activity.created_at ? formatDistanceToNow(activity.created_at) : '3m ago';
+                  const rating = activity.rating ? ` ${activity.rating}⭐` : '';
+                  // Show actual user name and restaurant name
+                  const actorName = activity.actor_name || activity.actor_username || 'User';
+                  const targetName = activity.target_name || activity.restaurant_name || '';
+                  primaryText = targetName 
+                    ? `${actorName} rated ${targetName}${rating}`
+                    : `${actorName} posted a review${rating}`;
+                  secondaryText = activity.created_at ? formatDistanceToNow(activity.created_at) : 'recently';
                   break;
+                  
                 case 'save':
                   iconBg = '#E8F5E9';
                   iconColor = '#4CAF50';
                   icon = <Bookmark size={18} color={iconColor} fill={iconColor} />;
-                  if (activity.target_name?.includes('Sushi Mori')) {
-                    primaryText = `Your reservation at ${activity.target_name} is confirmed for tonight at 7:30 PM`;
-                  } else {
-                    primaryText = `${activity.actor_name} saved ${activity.target_name || 'a place'}`;
-                  }
-                  secondaryText = activity.created_at ? formatDistanceToNow(activity.created_at) : '28m ago';
+                  const saveActorName = activity.actor_name || activity.actor_username || 'User';
+                  const saveTargetName = activity.target_name || activity.restaurant_name || '';
+                  primaryText = saveTargetName 
+                    ? `${saveActorName} saved ${saveTargetName}`
+                    : `${saveActorName} saved a restaurant`;
+                  secondaryText = activity.created_at ? formatDistanceToNow(activity.created_at) : 'recently';
                   break;
+                  
                 case 'follow':
                   iconBg = '#E3F2FD';
                   iconColor = '#2196F3';
                   icon = <Users size={18} color={iconColor} />;
-                  primaryText = `${activity.actor_name} started following you.`;
-                  secondaryText = formatDistanceToNow(activity.created_at);
+                  const followActorName = activity.actor_name || activity.actor_username || 'User';
+                  const followTargetName = activity.target_name || activity.related_user_name || activity.related_user_username || '';
+                  if (followTargetName) {
+                    primaryText = `${followActorName} started following ${followTargetName}`;
+                  } else {
+                    primaryText = `${followActorName} started following you`;
+                  }
+                  secondaryText = activity.created_at ? formatDistanceToNow(activity.created_at) : 'recently';
                   avatarUri = activity.actor_avatar;
                   break;
+                  
                 case 'trending':
                   iconBg = '#FCE4EC';
                   iconColor = '#E91E63';
@@ -352,16 +344,59 @@ export default function DiscoverScreen() {
                   primaryText = `12 new places are trending near you.`;
                   secondaryText = 'Today';
                   break;
+                  
                 case 'comment':
                   iconBg = '#F3E5F5';
                   iconColor = '#9C27B0';
                   icon = <MessageSquare size={18} color={iconColor} />;
-                  primaryText = `${activity.actor_name} reviewed ${activity.target_name}: "${activity.comment_text || 'Great place!'}"`;  
-                  secondaryText = formatDistanceToNow(activity.created_at);
+                  const commentActorName = activity.actor_name || activity.actor_username || 'User';
+                  const commentTargetName = activity.target_name || activity.restaurant_name || '';
+                  const commentText = activity.content || activity.comment_text || '';
+                  if (commentTargetName && commentText) {
+                    primaryText = `${commentActorName} reviewed ${commentTargetName}: "${commentText.substring(0, 50)}${commentText.length > 50 ? '...' : ''}"`;
+                  } else if (commentTargetName) {
+                    primaryText = `${commentActorName} commented on ${commentTargetName}`;
+                  } else {
+                    primaryText = `${commentActorName} left a comment`;
+                  }
+                  secondaryText = activity.created_at ? formatDistanceToNow(activity.created_at) : 'recently';
                   break;
+                  
+                case 'like':
+                  iconBg = '#FFE0E0';
+                  iconColor = '#F44336';
+                  icon = <Heart size={18} color={iconColor} fill={iconColor} />;
+                  const likeActorName = activity.actor_name || activity.actor_username || 'User';
+                  const likeTargetName = activity.target_name || activity.restaurant_name || '';
+                  primaryText = likeTargetName 
+                    ? `${likeActorName} liked ${likeTargetName}`
+                    : `${likeActorName} liked a post`;
+                  secondaryText = activity.created_at ? formatDistanceToNow(activity.created_at) : 'recently';
+                  break;
+                  
+                case 'community_join':
+                  iconBg = '#FFF3E0';
+                  iconColor = '#FF9800';
+                  icon = <Users size={18} color={iconColor} />;
+                  const joinActorName = activity.actor_name || activity.actor_username || 'User';
+                  const communityName = activity.target_name || activity.community_name || '';
+                  primaryText = communityName 
+                    ? `${joinActorName} joined ${communityName}`
+                    : `${joinActorName} joined a community`;
+                  secondaryText = activity.created_at ? formatDistanceToNow(activity.created_at) : 'recently';
+                  break;
+                  
                 default:
-                  primaryText = `${activity.actor_name} ${activity.activity_type} ${activity.target_name || ''}`;
-                  secondaryText = formatDistanceToNow(activity.created_at);
+                  iconBg = '#F5F5F5';
+                  iconColor = '#757575';
+                  icon = <Bell size={18} color={iconColor} />;
+                  const defaultActorName = activity.actor_name || activity.actor_username || 'User';
+                  const defaultTargetName = activity.target_name || activity.restaurant_name || '';
+                  const action = activity.action || activity.activity_type || 'updated';
+                  primaryText = defaultTargetName 
+                    ? `${defaultActorName} ${action} ${defaultTargetName}`
+                    : `${defaultActorName} ${action}`;
+                  secondaryText = activity.created_at ? formatDistanceToNow(activity.created_at) : 'recently';
               }
               
               return (
@@ -379,23 +414,16 @@ export default function DiscoverScreen() {
                   }}
                 >
                   <View style={[styles.activityIcon, { backgroundColor: iconBg }]}>
-                    {avatarUri ? (
-                      <Image source={{ uri: avatarUri }} style={styles.activityIconAvatar} />
-                    ) : (
-                      icon
-                    )}
+                    {icon}
                   </View>
                   <View style={styles.activityTextContent}>
-                    <Text style={styles.activityPrimaryText} numberOfLines={2}>
+                    <Text style={styles.activityPrimaryText} numberOfLines={1}>
                       {primaryText}
                     </Text>
                     <Text style={styles.activitySecondaryText}>
                       {secondaryText}
                     </Text>
                   </View>
-                  {avatarUri && (
-                    <Image source={{ uri: avatarUri }} style={styles.activityTrailingAvatar} />
-                  )}
                 </TouchableOpacity>
               );
             })}
@@ -634,11 +662,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: DS.spacing.lg,
     marginBottom: DS.spacing.md,
   },
+  seeAllContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   seeAllButton: {
     ...DS.typography.button,
     color: DS.colors.primaryOrange,
-    flexDirection: 'row',
-    alignItems: 'center',
+    fontSize: 14,
   },
   activityList: {
     backgroundColor: DS.colors.surface,
@@ -649,37 +681,42 @@ const styles = StyleSheet.create({
   activityItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: DS.spacing.md,
-    paddingHorizontal: DS.spacing.lg,
-    borderBottomWidth: 1,
+    paddingVertical: DS.spacing.sm,
+    paddingHorizontal: DS.spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: DS.colors.borderLight,
+    minHeight: 50,
   },
   activityIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: DS.spacing.md,
+    marginRight: DS.spacing.sm,
   },
   activityIconAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
   activityTextContent: {
     flex: 1,
-    marginRight: DS.spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   activityPrimaryText: {
     ...DS.typography.body,
     color: DS.colors.textDark,
-    lineHeight: 20,
+    fontSize: 14,
+    flex: 1,
+    marginRight: DS.spacing.sm,
   },
   activitySecondaryText: {
     ...DS.typography.caption,
     color: DS.colors.textGray,
-    marginTop: 2,
+    fontSize: 12,
   },
   activityTrailingAvatar: {
     width: 32,
