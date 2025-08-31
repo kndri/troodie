@@ -271,7 +271,7 @@ export default function DiscoverScreen() {
           </View>
         )}
 
-        {/* Activity Section */}
+        {/* Activity Stories Section */}
         <View style={styles.activitySection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Activity</Text>
@@ -284,12 +284,29 @@ export default function DiscoverScreen() {
             </TouchableOpacity>
           </View>
           
-          <View style={styles.activityList}>
-            {(isAuthenticated ? recentActivities : globalActivities).slice(0, 5).map((activity, index) => {
+          <ScrollView 
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.storiesContainer}
+          >
+            {/* Open Activity Story - Always First */}
+            <TouchableOpacity 
+              style={styles.storyItem}
+              onPress={() => router.push('/(tabs)/activity')}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.storyCircle, styles.openActivityCircle]}>
+                <Bell size={20} color={DS.colors.textWhite} />
+              </View>
+              <Text style={styles.storyLabel} numberOfLines={1}>All Activity</Text>
+            </TouchableOpacity>
+            
+            {/* Activity Stories */}
+            {(isAuthenticated ? recentActivities : globalActivities).slice(0, 8).map((activity, index) => {
               // Determine activity icon, text and colors
               let iconBg = '#FFF3E0';
               let iconColor = '#FFB800';
-              let icon = <Star size={18} color={iconColor} />;
+              let icon = <Star size={16} color={iconColor} />;
               let primaryText = '';
               let secondaryText = '';
               let avatarUri = null;
@@ -299,7 +316,7 @@ export default function DiscoverScreen() {
                 case 'review':
                   iconBg = '#FFF3E0';
                   iconColor = '#FFB800';
-                  icon = <Star size={18} color={iconColor} fill={iconColor} />;
+                  icon = <Star size={16} color={iconColor} fill={iconColor} />;
                   const rating = activity.rating ? ` ${activity.rating}⭐` : '';
                   // Show actual user name and restaurant name
                   const actorName = activity.actor_name || activity.actor_username || 'User';
@@ -313,7 +330,7 @@ export default function DiscoverScreen() {
                 case 'save':
                   iconBg = '#E8F5E9';
                   iconColor = '#4CAF50';
-                  icon = <Bookmark size={18} color={iconColor} fill={iconColor} />;
+                  icon = <Bookmark size={16} color={iconColor} fill={iconColor} />;
                   const saveActorName = activity.actor_name || activity.actor_username || 'User';
                   const saveTargetName = activity.target_name || activity.restaurant_name || '';
                   primaryText = saveTargetName 
@@ -325,7 +342,7 @@ export default function DiscoverScreen() {
                 case 'follow':
                   iconBg = '#E3F2FD';
                   iconColor = '#2196F3';
-                  icon = <Users size={18} color={iconColor} />;
+                  icon = <Users size={16} color={iconColor} />;
                   const followActorName = activity.actor_name || activity.actor_username || 'User';
                   const followTargetName = activity.target_name || activity.related_user_name || activity.related_user_username || '';
                   if (followTargetName) {
@@ -340,7 +357,7 @@ export default function DiscoverScreen() {
                 case 'trending':
                   iconBg = '#FCE4EC';
                   iconColor = '#E91E63';
-                  icon = <TrendingUp size={18} color={iconColor} />;
+                  icon = <TrendingUp size={16} color={iconColor} />;
                   primaryText = `12 new places are trending near you.`;
                   secondaryText = 'Today';
                   break;
@@ -348,7 +365,7 @@ export default function DiscoverScreen() {
                 case 'comment':
                   iconBg = '#F3E5F5';
                   iconColor = '#9C27B0';
-                  icon = <MessageSquare size={18} color={iconColor} />;
+                  icon = <MessageSquare size={16} color={iconColor} />;
                   const commentActorName = activity.actor_name || activity.actor_username || 'User';
                   const commentTargetName = activity.target_name || activity.restaurant_name || '';
                   const commentText = activity.content || activity.comment_text || '';
@@ -365,7 +382,7 @@ export default function DiscoverScreen() {
                 case 'like':
                   iconBg = '#FFE0E0';
                   iconColor = '#F44336';
-                  icon = <Heart size={18} color={iconColor} fill={iconColor} />;
+                  icon = <Heart size={16} color={iconColor} fill={iconColor} />;
                   const likeActorName = activity.actor_name || activity.actor_username || 'User';
                   const likeTargetName = activity.target_name || activity.restaurant_name || '';
                   primaryText = likeTargetName 
@@ -377,7 +394,7 @@ export default function DiscoverScreen() {
                 case 'community_join':
                   iconBg = '#FFF3E0';
                   iconColor = '#FF9800';
-                  icon = <Users size={18} color={iconColor} />;
+                  icon = <Users size={16} color={iconColor} />;
                   const joinActorName = activity.actor_name || activity.actor_username || 'User';
                   const communityName = activity.target_name || activity.community_name || '';
                   primaryText = communityName 
@@ -389,7 +406,7 @@ export default function DiscoverScreen() {
                 default:
                   iconBg = '#F5F5F5';
                   iconColor = '#757575';
-                  icon = <Bell size={18} color={iconColor} />;
+                  icon = <Bell size={16} color={iconColor} />;
                   const defaultActorName = activity.actor_name || activity.actor_username || 'User';
                   const defaultTargetName = activity.target_name || activity.restaurant_name || '';
                   const action = activity.action || activity.activity_type || 'updated';
@@ -399,10 +416,40 @@ export default function DiscoverScreen() {
                   secondaryText = activity.created_at ? formatDistanceToNow(activity.created_at) : 'recently';
               }
               
+              // Get a short label for the story
+              let storyLabel = '';
+              switch (activity.activity_type) {
+                case 'post':
+                case 'review':
+                  storyLabel = activity.target_name || activity.actor_name || 'Review';
+                  break;
+                case 'save':
+                  storyLabel = activity.target_name || 'Saved';
+                  break;
+                case 'follow':
+                  storyLabel = activity.actor_name || 'New Follow';
+                  break;
+                case 'trending':
+                  storyLabel = 'Trending';
+                  break;
+                case 'comment':
+                  storyLabel = activity.actor_name || 'Comment';
+                  break;
+                case 'like':
+                  storyLabel = activity.target_name || 'Like';
+                  break;
+                case 'community_join':
+                  storyLabel = activity.target_name || 'Community';
+                  break;
+                default:
+                  storyLabel = activity.actor_name || 'Update';
+              }
+              
               return (
                 <TouchableOpacity
                   key={activity.activity_id || `activity-${index}`}
-                  style={styles.activityItem}
+                  style={styles.storyItem}
+                  activeOpacity={0.7}
                   onPress={() => {
                     if (activity.restaurant_id) {
                       router.push(`/restaurant/${activity.restaurant_id}`);
@@ -413,30 +460,28 @@ export default function DiscoverScreen() {
                     }
                   }}
                 >
-                  <View style={[styles.activityIcon, { backgroundColor: iconBg }]}>
-                    {icon}
+                  <View style={styles.storyRing}>
+                    <View style={[styles.storyCircle, { backgroundColor: iconBg }]}>
+                      {activity.actor_avatar ? (
+                        <Image 
+                          source={{ uri: activity.actor_avatar }} 
+                          style={styles.storyAvatar}
+                        />
+                      ) : (
+                        icon
+                      )}
+                    </View>
                   </View>
-                  <View style={styles.activityTextContent}>
-                    <Text style={styles.activityPrimaryText} numberOfLines={1}>
-                      {primaryText}
-                    </Text>
-                    <Text style={styles.activitySecondaryText}>
-                      {secondaryText}
-                    </Text>
-                  </View>
+                  <Text style={styles.storyLabel} numberOfLines={1}>
+                    {storyLabel}
+                  </Text>
+                  <Text style={styles.storyTime} numberOfLines={1}>
+                    {secondaryText}
+                  </Text>
                 </TouchableOpacity>
               );
             })}
-            
-            {/* Open Activity Button */}
-            <TouchableOpacity 
-              style={styles.openActivityButton}
-              onPress={() => router.push('/activity')}
-            >
-              <Bell size={20} color={DS.colors.textWhite} />
-              <Text style={styles.openActivityButtonText}>Open Activity</Text>
-            </TouchableOpacity>
-          </View>
+          </ScrollView>
         </View>
 
         {/* Popular Near You */}
@@ -644,23 +689,21 @@ const styles = StyleSheet.create({
     color: DS.colors.textDark,
   },
   
-  // Activity Section
+  // Activity Stories Section
   activitySection: {
-    paddingTop: DS.spacing.lg,
+    paddingTop: DS.spacing.md,
     marginBottom: DS.spacing.lg,
   },
   sectionTitle: {
     ...DS.typography.h2,
     color: DS.colors.textDark,
-    paddingHorizontal: DS.spacing.lg,
-    marginBottom: DS.spacing.sm,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: DS.spacing.lg,
-    marginBottom: DS.spacing.md,
+    marginBottom: DS.spacing.sm,
   },
   seeAllContainer: {
     flexDirection: 'row',
@@ -672,70 +715,69 @@ const styles = StyleSheet.create({
     color: DS.colors.primaryOrange,
     fontSize: 14,
   },
-  activityList: {
-    backgroundColor: DS.colors.surface,
-    marginHorizontal: DS.spacing.lg,
-    borderRadius: DS.borderRadius.lg,
+  
+  // Stories Style
+  storiesContainer: {
+    paddingLeft: DS.spacing.lg,
+    paddingVertical: DS.spacing.xs,
+    gap: DS.spacing.sm,
+  },
+  storyItem: {
+    alignItems: 'center',
+    width: 64,
+    marginRight: DS.spacing.sm,
+  },
+  storyRing: {
+    padding: 2,
+    borderRadius: 28,
+    borderWidth: 2,
+    borderColor: DS.colors.primaryOrange,
+    marginBottom: 4,
+    shadowColor: DS.colors.primaryOrange,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  storyCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: DS.colors.surfaceLight,
     overflow: 'hidden',
   },
-  activityItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: DS.spacing.sm,
-    paddingHorizontal: DS.spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: DS.colors.borderLight,
-    minHeight: 50,
+  openActivityCircle: {
+    backgroundColor: DS.colors.textDark,
+    borderWidth: 0,
+    marginBottom: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  activityIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: DS.spacing.sm,
+  storyAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
   },
-  activityIconAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-  },
-  activityTextContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  activityPrimaryText: {
-    ...DS.typography.body,
+  storyLabel: {
+    ...DS.typography.caption,
     color: DS.colors.textDark,
-    fontSize: 14,
-    flex: 1,
-    marginRight: DS.spacing.sm,
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 2,
+    textAlign: 'center',
+    width: '100%',
   },
-  activitySecondaryText: {
+  storyTime: {
     ...DS.typography.caption,
     color: DS.colors.textGray,
-    fontSize: 12,
-  },
-  activityTrailingAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-  },
-  openActivityButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: DS.spacing.sm,
-    paddingVertical: DS.spacing.md,
-    backgroundColor: DS.colors.textDark,
-    borderBottomLeftRadius: DS.borderRadius.lg,
-    borderBottomRightRadius: DS.borderRadius.lg,
-  },
-  openActivityButtonText: {
-    ...DS.typography.button,
-    color: DS.colors.textWhite,
+    fontSize: 9,
+    textAlign: 'center',
+    marginTop: -1,
   },
   
   // No Activity Card
