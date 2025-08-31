@@ -12,8 +12,8 @@ import {
 } from '@expo-google-fonts/poppins';
 import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
+import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
@@ -162,6 +162,8 @@ export default Sentry.wrap(function RootLayout() {
               <Stack.Screen name="user/[id]/following" options={{ headerShown: false }} />
               <Stack.Screen name="user/[id]/followers" options={{ headerShown: false }} />
               <Stack.Screen name="settings/blocked-users" options={{ headerShown: false }} />
+              <Stack.Screen name="activity" options={{ headerShown: false }} />
+              <Stack.Screen name="search" options={{ headerShown: false }} />
               <Stack.Screen name="+not-found" />
             </Stack>
             <StatusBar style="dark" />

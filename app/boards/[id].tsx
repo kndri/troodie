@@ -1,33 +1,46 @@
-import { RestaurantCard } from '@/components/cards/RestaurantCard';
-import { theme } from '@/constants/theme';
+/**
+ * BOARD DETAIL SCREEN - V1.0 Design
+ * Shows restaurants saved to a specific board with improved visual design
+ */
+
+import { RestaurantCardWithSave } from '@/components/cards/RestaurantCardWithSave';
+import { DS } from '@/components/design-system/tokens';
 import { useAuth } from '@/contexts/AuthContext';
 import { boardService } from '@/services/boardService';
 import { restaurantService } from '@/services/restaurantService';
 import ShareService from '@/services/shareService';
 import { ToastService } from '@/services/toastService';
 import { BoardRestaurant, BoardWithRestaurants } from '@/types/board';
+import { RestaurantInfo } from '@/types/core';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
-  ChevronLeft,
-  Edit,
-  Home,
-  MapPin,
+  ArrowLeft,
+  Bookmark,
+  Edit2,
+  Globe,
+  Lock,
   MoreVertical,
   Plus,
   Share2,
-  Trash2
+  Trash2,
+  Users
 } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
+  Dimensions,
+  Image,
+  RefreshControl,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View
 } from 'react-native';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function BoardDetailScreen() {
   const router = useRouter();
@@ -36,22 +49,19 @@ export default function BoardDetailScreen() {
   const boardId = params.id as string;
 
   const [board, setBoard] = useState<BoardWithRestaurants | null>(null);
-  const [restaurants, setRestaurants] = useState<any[]>([]);
+  const [restaurants, setRestaurants] = useState<RestaurantInfo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
-  useEffect(() => {
-    loadBoardDetails();
-  }, [boardId]);
-
-  const loadBoardDetails = async () => {
+  const loadBoardDetails = useCallback(async () => {
     try {
       setLoading(true);
       
       const boardData = await boardService.getBoardWithRestaurants(boardId);
       if (!boardData) {
-        Alert.alert('Error', 'Board not found');
+        ToastService.showError('Board not found');
         router.back();
         return;
       }
@@ -62,18 +72,30 @@ export default function BoardDetailScreen() {
       if (boardData.restaurants && boardData.restaurants.length > 0) {
         const restaurantPromises = boardData.restaurants.map(async (br: BoardRestaurant) => {
           const restaurant = await restaurantService.getRestaurantById(br.restaurant_id);
-          return { ...restaurant, boardRestaurant: br };
+          return restaurant;
         });
         
         const restaurantData = await Promise.all(restaurantPromises);
-        setRestaurants(restaurantData.filter(r => r !== null));
+        setRestaurants(restaurantData.filter(r => r !== null) as RestaurantInfo[]);
+      } else {
+        setRestaurants([]);
       }
     } catch (error) {
       console.error('Error loading board details:', error);
-      Alert.alert('Error', 'Failed to load board details');
+      ToastService.showError('Failed to load board details');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  }, [boardId, user?.id, router]);
+
+  useEffect(() => {
+    loadBoardDetails();
+  }, [loadBoardDetails]);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    loadBoardDetails();
   };
 
   const handleAddRestaurants = () => {
@@ -81,13 +103,9 @@ export default function BoardDetailScreen() {
       pathname: '/add/board-assignment',
       params: {
         boardId: board?.id,
-        boardTitle: board?.title
+        boardTitle: board?.name
       }
     });
-  };
-
-  const handleGoHome = () => {
-    router.push('/(tabs)');
   };
 
   const handleShareBoard = async () => {
@@ -112,59 +130,12 @@ export default function BoardDetailScreen() {
   };
 
   const handleEditBoard = () => {
-    if (!isOwner) return;
+    if (!isOwner || !board) return;
     
-    Alert.alert(
-      'Edit Board',
-      'What would you like to edit?',
-      [
-        {
-          text: 'Board Name',
-          onPress: () => {
-            Alert.prompt(
-              'Edit Board Name',
-              'Enter a new name for your board:',
-              async (newName) => {
-                if (newName && newName.trim()) {
-                  try {
-                    await boardService.updateBoard(boardId, { name: newName.trim() });
-                    setBoard(prev => prev ? { ...prev, name: newName.trim() } : null);
-                    ToastService.showSuccess('Board name updated');
-                  } catch (error) {
-                    ToastService.showError('Failed to update board name');
-                  }
-                }
-              },
-              'plain-text',
-              board?.name
-            );
-          }
-        },
-        {
-          text: 'Board Description',
-          onPress: () => {
-            Alert.prompt(
-              'Edit Board Description',
-              'Enter a new description for your board:',
-              async (newDescription) => {
-                if (newDescription !== undefined) {
-                  try {
-                    await boardService.updateBoard(boardId, { description: newDescription.trim() || null });
-                    setBoard(prev => prev ? { ...prev, description: newDescription.trim() || null } : null);
-                    ToastService.showSuccess('Board description updated');
-                  } catch (error) {
-                    ToastService.showError('Failed to update board description');
-                  }
-                }
-              },
-              'plain-text',
-              board?.description || ''
-            );
-          }
-        },
-        { text: 'Cancel', style: 'cancel' }
-      ]
-    );
+    router.push({
+      pathname: '/boards/edit',
+      params: { id: board.id }
+    });
   };
 
   const handleDeleteBoard = () => {
@@ -181,10 +152,10 @@ export default function BoardDetailScreen() {
           onPress: async () => {
             try {
               await boardService.deleteBoard(boardId);
-              Alert.alert('Success', 'Board deleted successfully');
-              router.push('/(tabs)');
+              ToastService.showSuccess('Board deleted');
+              router.replace('/(tabs)/saves');
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete board');
+              ToastService.showError('Failed to delete board');
             }
           }
         }
@@ -195,167 +166,264 @@ export default function BoardDetailScreen() {
   const handleRemoveRestaurant = async (restaurantId: string) => {
     if (!isOwner) return;
 
-    Alert.alert(
-      'Remove Restaurant',
-      'Are you sure you want to remove this restaurant from the board?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await boardService.removeRestaurantFromBoard(boardId, restaurantId);
-              await loadBoardDetails();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to remove restaurant');
-            }
-          }
-        }
-      ]
-    );
+    try {
+      await boardService.removeRestaurantFromBoard(boardId, restaurantId);
+      setRestaurants(prev => prev.filter(r => r.id !== restaurantId));
+      ToastService.showSuccess('Restaurant removed');
+    } catch (error) {
+      ToastService.showError('Failed to remove restaurant');
+    }
   };
 
-  const renderHeader = () => (
-    <View style={styles.header}>
-      <View style={styles.navigationGroup}>
-        <TouchableOpacity style={styles.navButton} onPress={() => router.back()}>
-          <ChevronLeft size={22} color={theme.colors.text.dark} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton} onPress={handleGoHome}>
-          <Home size={18} color={theme.colors.text.dark} />
-        </TouchableOpacity>
-      </View>
-      <View style={styles.headerContent}>
-        <Text style={styles.headerTitle} numberOfLines={1}>{board?.title || 'Board'}</Text>
-        <Text style={styles.headerSubtitle}>
-          {board?.restaurant_count || 0} places • {board?.is_private ? 'Private' : 'Public'}
-        </Text>
-      </View>
-      <View style={styles.headerActions}>
-        <TouchableOpacity style={styles.headerButton} onPress={handleShareBoard}>
-          <Share2 size={18} color={theme.colors.text.dark} />
-        </TouchableOpacity>
-        {isOwner && (
-          <TouchableOpacity 
-            style={styles.headerButton}
-            onPress={() => setShowMoreMenu(!showMoreMenu)}
-          >
-            <MoreVertical size={18} color={theme.colors.text.dark} />
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
-  );
-
-  const renderMoreMenu = () => {
-    if (!showMoreMenu || !isOwner) return null;
-
-    return (
-      <View style={styles.moreMenu}>
-        <TouchableOpacity style={styles.menuItem} onPress={handleEditBoard}>
-          <Edit size={16} color={theme.colors.text.primary} />
-          <Text style={styles.menuText}>Edit Board</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.menuItem, styles.menuItemLast]} onPress={handleDeleteBoard}>
-          <Trash2 size={16} color={theme.colors.error} />
-          <Text style={[styles.menuText, { color: theme.colors.error }]}>Delete Board</Text>
-        </TouchableOpacity>
-      </View>
-    );
+  const handleRestaurantPress = (restaurantId: string) => {
+    router.push(`/restaurant/${restaurantId}`);
   };
-
-  const renderBoardInfo = () => {
-    if (!board?.description && !board?.category && !board?.location) return null;
-    
-    return (
-      <View style={styles.boardInfo}>
-        {board?.description && (
-          <Text style={styles.boardDescription} numberOfLines={2}>{board.description}</Text>
-        )}
-        <View style={styles.boardTags}>
-          {board?.category && (
-            <View style={styles.tag}>
-              <Text style={styles.tagText}>{board.category}</Text>
-            </View>
-          )}
-          {board?.location && (
-            <View style={styles.tag}>
-              <MapPin size={10} color={theme.colors.text.secondary} />
-              <Text style={styles.tagText}>{board.location}</Text>
-            </View>
-          )}
-        </View>
-      </View>
-    );
-  };
-
-  const renderFooter = () => {
-    if (!isOwner || restaurants.length === 0) return null;
-    
-    return (
-      <TouchableOpacity style={styles.addMoreButton} onPress={handleAddRestaurants}>
-        <Plus size={16} color={theme.colors.primary} />
-        <Text style={styles.addMoreText}>Add More Places</Text>
-      </TouchableOpacity>
-    );
-  };
-
-  const renderRestaurantItem = ({ item: restaurant }: { item: any }) => {
-    // Restaurant is already transformed to RestaurantInfo by restaurantService.getRestaurantById()
-    return (
-      <View style={styles.restaurantItemContainer}>
-        <RestaurantCard
-          restaurant={restaurant}
-          onPress={() => router.push(`/restaurant/${restaurant.id}`)}
-        />
-      </View>
-    );
-  };
-
-  const renderEmptyState = () => (
-    <View style={styles.emptyState}>
-      <MapPin size={32} color={theme.colors.text.tertiary} />
-      <Text style={styles.emptyTitle}>No places yet</Text>
-      <Text style={styles.emptyText}>
-        {isOwner ? 'Add your first recommendation' : 'This board is empty'}
-      </Text>
-    </View>
-  );
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        {renderHeader()}
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={DS.colors.primaryOrange} />
         </View>
       </SafeAreaView>
     );
   }
 
+  if (!board) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Board not found</Text>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Get images for collage (up to 4) - following BoardCollageCard pattern
+  const collageImages: string[] = [];
+  restaurants.slice(0, 4).forEach(restaurant => {
+    // Use same logic as other screens: main_image first, then restaurantService fallback
+    const image = restaurant.main_image || 
+                  restaurant.cover_photo_url ||
+                  restaurant.image ||
+                  restaurantService.getRestaurantImage(restaurant);
+    collageImages.push(image);
+  });
+
+  // Fill with placeholders if less than 4
+  while (collageImages.length < 4) {
+    collageImages.push('');
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      {renderHeader()}
-      {renderMoreMenu()}
-      <FlatList
-        data={restaurants}
-        renderItem={renderRestaurantItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        ListHeaderComponent={renderBoardInfo()}
-        ListEmptyComponent={renderEmptyState()}
-        ListFooterComponent={renderFooter()}
-      />
-      {isOwner && restaurants.length === 0 && (
-        <View style={styles.floatingButtonContainer}>
-          <TouchableOpacity style={styles.floatingAddButton} onPress={handleAddRestaurants}>
-            <Plus size={20} color="#FFFFFF" />
-            <Text style={styles.floatingAddText}>Add Places</Text>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backIcon}>
+          <ArrowLeft size={24} color={DS.colors.textDark} />
+        </TouchableOpacity>
+        
+        <View style={styles.headerActions}>
+          {isOwner && (
+            <TouchableOpacity onPress={handleEditBoard}>
+              <Edit2 size={20} color={DS.colors.textDark} />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={handleShareBoard}>
+            <Share2 size={20} color={DS.colors.textDark} />
+          </TouchableOpacity>
+          {isOwner && (
+            <TouchableOpacity onPress={() => setShowMoreMenu(!showMoreMenu)}>
+              <MoreVertical size={20} color={DS.colors.textDark} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {/* More Menu Dropdown */}
+      {showMoreMenu && (
+        <View style={styles.moreMenu}>
+          <TouchableOpacity style={styles.moreMenuItem} onPress={handleDeleteBoard}>
+            <Trash2 size={18} color={DS.colors.error} />
+            <Text style={styles.moreMenuTextDanger}>Delete Board</Text>
           </TouchableOpacity>
         </View>
       )}
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
+      >
+        {/* Board Collage Header with Name Overlay */}
+        <View style={styles.collageContainer}>
+          <View style={styles.imageGrid}>
+            {collageImages.map((image, index) => (
+              <View key={index} style={styles.imageWrapper}>
+                {image ? (
+                  <Image 
+                    source={{ uri: image }} 
+                    style={styles.gridImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={styles.placeholderImage}>
+                    <Text style={styles.placeholderEmoji}>
+                      {index === 0 ? '🍽️' : index === 1 ? '🍕' : index === 2 ? '🍜' : '🥗'}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            ))}
+          </View>
+          
+          {/* Board Name Overlay */}
+          <View style={styles.boardNameOverlay}>
+            <Text style={styles.boardNameOverlayText} numberOfLines={2}>
+              {board.name}
+            </Text>
+            <Text style={styles.boardCountOverlay}>
+              {restaurants.length} {restaurants.length === 1 ? 'Place' : 'Places'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Board Info */}
+        <View style={styles.boardInfo}>
+          {board.description && (
+            <Text style={styles.boardDescription}>{board.description}</Text>
+          )}
+          
+          <View style={styles.boardMeta}>
+            <View style={styles.metaItem}>
+              {board.is_public ? (
+                <Globe size={14} color={DS.colors.textGray} />
+              ) : (
+                <Lock size={14} color={DS.colors.textGray} />
+              )}
+              <Text style={styles.metaText}>
+                {board.is_public ? 'Public' : 'Private'}
+              </Text>
+            </View>
+            
+            <View style={styles.metaDot} />
+            
+            <View style={styles.metaItem}>
+              <Text style={styles.metaText}>
+                {restaurants.length} {restaurants.length === 1 ? 'Place' : 'Places'}
+              </Text>
+            </View>
+            
+            {board.created_by && (
+              <>
+                <View style={styles.metaDot} />
+                <View style={styles.metaItem}>
+                  <Users size={14} color={DS.colors.textGray} />
+                  <Text style={styles.metaText}>
+                    {board.created_by.username || 'Unknown'}
+                  </Text>
+                </View>
+              </>
+            )}
+          </View>
+
+          {/* Primary Action Button */}
+          {isOwner && (
+            <TouchableOpacity style={styles.primaryButton} onPress={handleAddRestaurants}>
+              <Plus size={18} color={DS.colors.textWhite} />
+              <Text style={styles.primaryButtonText}>Add Places</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Restaurant List */}
+        <View style={styles.restaurantSection}>
+          {restaurants.length === 0 ? (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIcon}>
+                <Bookmark size={48} color={DS.colors.textGray} />
+              </View>
+              <Text style={styles.emptyTitle}>No places yet</Text>
+              <Text style={styles.emptyText}>
+                {isOwner 
+                  ? "Start adding your favorite spots to this board"
+                  : "This board doesn't have any places yet"}
+              </Text>
+              {isOwner && (
+                <TouchableOpacity 
+                  style={styles.emptyButton}
+                  onPress={() => router.push('/(tabs)/explore')}
+                >
+                  <Text style={styles.emptyButtonText}>Explore Restaurants</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ) : (
+            <>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Places in this board</Text>
+                <Text style={styles.sectionCount}>{restaurants.length}</Text>
+              </View>
+              
+              {restaurants.map((restaurant) => (
+                <TouchableOpacity
+                  key={restaurant.id}
+                  style={styles.restaurantCard}
+                  onPress={() => handleRestaurantPress(restaurant.id)}
+                  activeOpacity={0.95}
+                >
+                  <Image 
+                    source={{ uri: restaurant.main_image || restaurant.image || restaurantService.getRestaurantImage(restaurant) }}
+                    style={styles.restaurantImage}
+                  />
+                  
+                  <View style={styles.restaurantContent}>
+                    <View style={styles.restaurantInfo}>
+                      <Text style={styles.restaurantName}>{restaurant.name}</Text>
+                      <View style={styles.restaurantMeta}>
+                        <Text style={styles.restaurantCategory}>
+                          {restaurant.cuisine_type || 'Restaurant'}
+                        </Text>
+                        <Text style={styles.metaDot}>•</Text>
+                        <Text style={styles.restaurantPrice}>
+                          {restaurant.price_level || '$$'}
+                        </Text>
+                      </View>
+                      {restaurant.rating && (
+                        <View style={styles.restaurantRating}>
+                          <Text style={styles.ratingEmoji}>⭐</Text>
+                          <Text style={styles.ratingText}>{restaurant.rating}</Text>
+                        </View>
+                      )}
+                      {restaurant.address && (
+                        <Text style={styles.restaurantAddress} numberOfLines={1}>
+                          📍 {restaurant.address}
+                        </Text>
+                      )}
+                    </View>
+                    
+                    {isOwner && (
+                      <TouchableOpacity 
+                        style={styles.removeButton}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleRemoveRestaurant(restaurant.id);
+                        }}
+                      >
+                        <Trash2 size={16} color={DS.colors.error} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </>
+          )}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -363,189 +431,294 @@ export default function BoardDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.surface,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: '#FFFFFF',
-  },
-  navigationGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  navButton: {
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerContent: {
-    flex: 1,
-    marginLeft: 8,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
-    color: theme.colors.text.dark,
-    marginBottom: 2,
-  },
-  headerSubtitle: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    color: theme.colors.text.secondary,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  headerButton: {
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  moreMenu: {
-    position: 'absolute',
-    top: 60,
-    right: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    paddingVertical: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    zIndex: 1000,
-    minWidth: 140,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    gap: 10,
-  },
-  menuItemLast: {
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  menuText: {
-    fontSize: 13,
-    fontFamily: 'Inter_500Medium',
-    color: theme.colors.text.primary,
-  },
-  boardInfo: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  boardDescription: {
-    fontSize: 13,
-    fontFamily: 'Inter_400Regular',
-    color: theme.colors.text.secondary,
-    lineHeight: 18,
-    marginBottom: 8,
-  },
-  boardTags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  tag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.backgroundGray,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
-  },
-  tagText: {
-    fontSize: 11,
-    fontFamily: 'Inter_400Regular',
-    color: theme.colors.text.secondary,
-  },
-  listContent: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  restaurantItemContainer: {
-    marginBottom: 10,
+    backgroundColor: DS.colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  emptyState: {
+  errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
+    padding: DS.spacing.lg,
   },
-  emptyTitle: {
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
-    color: theme.colors.text.primary,
-    marginTop: 16,
-    marginBottom: 4,
+  errorText: {
+    ...DS.typography.h3,
+    color: DS.colors.textDark,
+    marginBottom: DS.spacing.lg,
   },
-  emptyText: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    color: theme.colors.text.secondary,
-    textAlign: 'center',
+  backButton: {
+    paddingHorizontal: DS.spacing.xl,
+    paddingVertical: DS.spacing.md,
+    backgroundColor: DS.colors.primaryOrange,
+    borderRadius: DS.borderRadius.md,
   },
-  floatingButtonContainer: {
-    position: 'absolute',
-    bottom: 24,
-    right: 16,
+  backButtonText: {
+    ...DS.typography.button,
+    color: DS.colors.textWhite,
   },
-  floatingAddButton: {
+  
+  // Header
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
-    gap: 6,
+    justifyContent: 'space-between',
+    paddingHorizontal: DS.spacing.lg,
+    paddingVertical: DS.spacing.md,
+    backgroundColor: DS.colors.surface,
   },
-  floatingAddText: {
-    fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
-    color: '#FFFFFF',
+  backIcon: {
+    padding: DS.spacing.xs,
   },
-  addMoreButton: {
+  headerActions: {
+    flexDirection: 'row',
+    gap: DS.spacing.lg,
+  },
+  
+  // More Menu
+  moreMenu: {
+    position: 'absolute',
+    top: 60,
+    right: DS.spacing.lg,
+    backgroundColor: DS.colors.surface,
+    borderRadius: DS.borderRadius.md,
+    ...DS.shadows.md,
+    zIndex: 1000,
+  },
+  moreMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DS.spacing.sm,
+    padding: DS.spacing.md,
+  },
+  moreMenuTextDanger: {
+    ...DS.typography.body,
+    color: DS.colors.error,
+  },
+  
+  // Collage Header
+  collageContainer: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_WIDTH,
+    backgroundColor: DS.colors.surface,
+    position: 'relative',
+  },
+  imageGrid: {
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  imageWrapper: {
+    width: '50%',
+    height: '50%',
+    padding: 1,
+  },
+  gridImage: {
+    width: '100%',
+    height: '100%',
+  },
+  placeholderImage: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: DS.colors.surfaceLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderEmoji: {
+    fontSize: 40,
+  },
+  boardNameOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: DS.spacing.lg,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  boardNameOverlayText: {
+    ...DS.typography.h1,
+    color: DS.colors.textWhite,
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: DS.spacing.xs,
+  },
+  boardCountOverlay: {
+    ...DS.typography.body,
+    color: DS.colors.textWhite,
+    opacity: 0.9,
+  },
+  
+  // Board Info
+  boardInfo: {
+    padding: DS.spacing.lg,
+    backgroundColor: DS.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: DS.colors.borderLight,
+  },
+  boardDescription: {
+    ...DS.typography.body,
+    color: DS.colors.textGray,
+    marginBottom: DS.spacing.md,
+    lineHeight: 22,
+  },
+  boardMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: DS.spacing.lg,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DS.spacing.xs,
+  },
+  metaText: {
+    ...DS.typography.metadata,
+    color: DS.colors.textGray,
+  },
+  metaDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: DS.colors.textGray,
+    marginHorizontal: DS.spacing.sm,
+  },
+  
+  // Primary Button
+  primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-    borderRadius: 12,
-    paddingVertical: 12,
-    marginHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 16,
-    gap: 6,
+    gap: DS.spacing.sm,
+    paddingVertical: DS.spacing.md,
+    borderRadius: DS.borderRadius.md,
+    backgroundColor: DS.colors.primaryOrange,
   },
-  addMoreText: {
+  primaryButtonText: {
+    ...DS.typography.button,
+    color: DS.colors.textWhite,
+  },
+  
+  // Restaurant Section
+  restaurantSection: {
+    padding: DS.spacing.lg,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: DS.spacing.lg,
+  },
+  sectionTitle: {
+    ...DS.typography.h3,
+    color: DS.colors.textDark,
+  },
+  sectionCount: {
+    ...DS.typography.metadata,
+    color: DS.colors.textGray,
+  },
+  
+  // Restaurant Card
+  restaurantCard: {
+    backgroundColor: DS.colors.surface,
+    borderRadius: DS.borderRadius.lg,
+    marginBottom: DS.spacing.md,
+    overflow: 'hidden',
+    ...DS.shadows.sm,
+  },
+  restaurantImage: {
+    width: '100%',
+    height: 180,
+  },
+  restaurantContent: {
+    padding: DS.spacing.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  restaurantInfo: {
+    flex: 1,
+  },
+  restaurantName: {
+    ...DS.typography.h3,
+    color: DS.colors.textDark,
+    marginBottom: DS.spacing.xs,
+  },
+  restaurantMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: DS.spacing.xs,
+  },
+  restaurantCategory: {
+    ...DS.typography.metadata,
+    color: DS.colors.textGray,
+  },
+  restaurantPrice: {
+    ...DS.typography.metadata,
+    color: DS.colors.textGray,
+  },
+  restaurantRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DS.spacing.xs,
+    marginBottom: DS.spacing.xs,
+  },
+  ratingEmoji: {
     fontSize: 14,
-    fontFamily: 'Inter_500Medium',
-    color: theme.colors.primary,
+  },
+  ratingText: {
+    ...DS.typography.metadata,
+    color: DS.colors.textDark,
+    fontWeight: '600',
+  },
+  restaurantAddress: {
+    ...DS.typography.caption,
+    color: DS.colors.textGray,
+  },
+  removeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: DS.colors.surfaceLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  // Empty State
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: DS.spacing.huge,
+  },
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: DS.colors.surfaceLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: DS.spacing.lg,
+  },
+  emptyTitle: {
+    ...DS.typography.h3,
+    color: DS.colors.textDark,
+    marginBottom: DS.spacing.sm,
+  },
+  emptyText: {
+    ...DS.typography.body,
+    color: DS.colors.textGray,
+    textAlign: 'center',
+    marginBottom: DS.spacing.xl,
+    paddingHorizontal: DS.spacing.xl,
+  },
+  emptyButton: {
+    paddingHorizontal: DS.spacing.xl,
+    paddingVertical: DS.spacing.md,
+    backgroundColor: DS.colors.primaryOrange,
+    borderRadius: DS.borderRadius.md,
+  },
+  emptyButtonText: {
+    ...DS.typography.button,
+    color: DS.colors.textWhite,
   },
 });

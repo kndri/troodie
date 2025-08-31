@@ -82,7 +82,13 @@ export const boardService = {
       // Use the user_boards view which handles all the complex permissions
       const { data, error } = await supabase
         .from('user_boards')
-        .select('*')
+        .select(`
+          *,
+          restaurants:board_restaurants(
+            *,
+            restaurant:restaurants(*)
+          )
+        `)
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
 
@@ -95,7 +101,13 @@ export const boardService = {
         // Get boards owned by user
         const { data: ownedBoards, error: ownedError } = await supabase
           .from('boards')
-          .select('*')
+          .select(`
+            *,
+            restaurants:board_restaurants(
+              *,
+              restaurant:restaurants(*)
+            )
+          `)
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
         
@@ -116,7 +128,13 @@ export const boardService = {
         if (memberBoardIds.length > 0) {
           const { data, error } = await supabase
             .from('boards')
-            .select('*')
+            .select(`
+              *,
+              restaurants:board_restaurants(
+                *,
+                restaurant:restaurants(*)
+              )
+            `)
             .in('id', memberBoardIds)
           
           if (!error && data) {

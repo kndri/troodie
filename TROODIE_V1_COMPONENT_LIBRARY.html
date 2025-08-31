@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head><meta charset="utf-8" />
+<title>Troodie v1.0 • Component Library</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- Inter font -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!-- Tailwind CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script></head>
+  <body class="font-[Inter] bg-white text-neutral-900 antialiased selection:bg-[#FFAD27]/20 selection:text-neutral-900">
+    <!-- Top Bar -->
+    <header class="sticky top-0 z-50 backdrop-blur-xl bg-white/70 border-b border-neutral-200">
+      <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="h-8 w-8 rounded-md bg-[#FFAD27] grid place-items-center ring-1 ring-black/10" style="letter-spacing:-0.04em;">
+            <span class="text-neutral-900 text-[13px] font-semibold">TR</span>
+          </div>
+          <div class="flex flex-col">
+            <h1 class="text-lg sm:text-xl font-semibold tracking-tight">Troodie v1.0 Component Library</h1>
+            <p class="text-xs text-neutral-500">“Never Empty, Always Evolving” • Primary: #FFAD27</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <!-- Dynamic Type Scale -->
+          <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white ring-1 ring-neutral-200">
+            <span class="text-[10px] text-neutral-500">Type</span>
+            <input id="typeScale" type="range" min="0.9" max="1.6" step="0.05" value="1.0" class="w-28 accent-[#FFAD27] bg-transparent">
+            <span id="typeScaleLabel" class="text-[10px] text-neutral-700">100%</span>
+          </div>
+          <!-- Theme Toggle -->
+          <button id="themeToggle" class="group px-3 py-1.5 rounded-lg flex items-center gap-2 ring-1 ring-neutral-200 hover:ring-neutral-300 hover:bg-neutral-50 transition active:scale-95">
+            <i data-lucide="sun" class="w-4 h-4"></i>
+            <span class="text-xs font-medium">Theme</span>
+          </button>
+        </div>
+      </div>
+      <!-- Section Nav -->
+      <nav class="overflow-x-auto no-scrollbar border-t border-neutral-200">
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+          <ul class="flex gap-2 text-[11px]">
+            <li><a href="#restaurant-card" class="px-2.5 py-1 rounded-md bg-white ring-1 ring-neutral-200 hover:ring-neutral-300 hover:bg-neutral-50 transition">Restaurant Card</a></li>
+            <li><a href="#colors" class="px-2.5 py-1 rounded-md hover:bg-neutral-50 ring-1 ring-neutral-200 hover:ring-neutral-300 transition">Colors</a></li>
+            <li><a href="#typography" class="px-2.5 py-1 rounded-md hover:bg-neutral-50 ring-1 ring-neutral-200 hover:ring-neutral-300 transition">Typography</a></li>
+            <li><a href="#spacing" class="px-2.5 py-1 rounded-md hover:bg-neutral-50 ring-1 ring-neutral-200 hover:ring-neutral-300 transition">Spacing</a></li>
+            <li><a href="#icons" class="px-2.5 py-1 rounded-md hover:bg-neutral-50 ring-1 ring-neutral-200 hover:ring-neutral-300 transition">Iconography</a></li>
+            <li><a href="#buttons" class="px-2.5 py-1 rounded-md hover:bg-neutral-50 ring-1 ring-neutral-200 hover:ring-neutral-300 transition">Buttons</a></li>
+            <li><a href="#cards" class="px-2.5 py-1 rounded-md hover:bg-neutral-50 ring-1 ring-neutral-200 hover:ring-neutral-300 transition">Cards</a></li>
+            <li><a href="#inputs" class="px-2.5 py-1 rounded-md hover:bg-neutral-50 ring-1 ring-neutral-200 hover:ring-neutral-300 transition">Inputs</a></li>
+            <li><a href="#navigation" class="px-2.5 py-1 rounded-md hover:bg-neutral-50 ring-1 ring-neutral-200 hover:ring-neutral-300 transition">Navigation</a></li>
+            <li><a href="#feedback" class="px-2.5 py-1 rounded-md hover:bg-neutral-50 ring-1 ring-neutral-200 hover:ring-neutral-300 transition">Feedback</a></li>
+            <li><a href="#overlays" class="px-2.5 py-1 rounded-md hover:bg-neutral-50 ring-1 ring-neutral-200 hover:ring-neutral-300 transition">Overlays</a></li>
+            <li><a href="#special" class="px-2.5 py-1 rounded-md hover:bg-neutral-50 ring-1 ring-neutral-200 hover:ring-neutral-300 transition">Special</a></li>
+            <li><a href="#creator" class="px-2.5 py-1 rounded-md hover:bg-neutral-50 ring-1 ring-neutral-200 hover:ring-neutral-300 transition">Creator</a></li>
+            <li><a href="#business" class="px-2.5 py-1 rounded-md hover:bg-neutral-50 ring-1 ring-neutral-200 hover:ring-neutral-300 transition">Business</a></li>
+            <li><a href="#responsive" class="px-2.5 py-1 rounded-md hover:bg-neutral-50 ring-1 ring-neutral-200 hover:ring-neutral-300 transition">Responsive</a></li>
+            <li><a href="#moodboard" class="px-2.5 py-1 rounded-md hover:bg-neutral-50 ring-1 ring-neutral-200 hover:ring-neutral-300 transition">Moodboards</a></li>
+          </ul>
+        </div>
+      </nav>
+    </header>
+
+    <main class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-14">
+      <!-- Intro -->
+      <section class="grid lg:grid-cols-2 gap-6">
+        <div class="p-5 rounded-2xl bg-white ring-1 ring-neutral-200">
+          <h2 class="text-2xl font-semibold tracking-tight">Design Principles</h2>
+          <ul class="mt-4 grid gap-2 text-sm text-neutral-600">
+            <li class="flex items-start gap-2"><i data-lucide="star" class="w-4 h-4 text-[#FFAD27] mt-0.5"></i><span>Troodie Gold is reserved for primary actions and moments of delight.</span></li>
+            <li class="flex items-start gap-2"><i data-lucide="sparkles" class="w-4 h-4 text-[#FFAD27] mt-0.5"></i><span>Never Empty: every state has value, guidance, and a next step.</span></li>
+            <li class="flex items-start gap-2"><i data-lucide="users" class="w-4 h-4 text-[#FFAD27] mt-0.5"></i><span>Friend signals first; social proof informs discovery.</span></li>
+            <li class="flex items-start gap-2"><i data-lucide="zap" class="w-4 h-4 text-[#FFAD27] mt-0.5"></i><span>One-tap actions; earned complexity; inclusive and accessible.</span></li>
+          </ul>
+        </div>
+        <div class="p-5 rounded-2xl bg-white ring-1 ring-neutral-200">
+          <h3 class="text-lg font-medium tracking-tight">Foundation Checklist</h3>
+          <div class="mt-3 grid sm:grid-cols-2 gap-3 text-sm">
+            <div class="p-3 rounded-xl bg-white ring-1 ring-neutral-200">
+              <p class="text-neutral-600">Phase 1</p>
+              <ul class="mt-2 space-y-1">
+                <li class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-[#4CAF50]"></i>Colors, Type, Spacing</li>
+                <li class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-[#4CAF50]"></i>Core Buttons</li>
+                <li class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-[#4CAF50]"></i>Restaurant Card</li>
+              </ul>
+            </div>
+            <div class="p-3 rounded-xl bg-white ring-1 ring-neutral-200">
+              <p class="text-neutral-600">Quick Controls</p>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <button id="showGrid" class="px-3 py-1.5 text-xs rounded-full bg-white hover:bg-neutral-50 ring-1 ring-neutral-200 transition">Grid On/Off</button>
+                <button id="showBounds" class="px-3 py-1.5 text-xs rounded-full bg-white hover:bg-neutral-50 ring-1 ring-neutral-200 transition">Safe Areas</button>
+                <button id="toggleCompact" class="px-3 py-1.5 text-xs rounded-full bg-white hover:bg-neutral-50 ring-1 ring-neutral-200 transition">Compact</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3.1 Restaurant Card - Start First -->
+      <section id="restaurant-card" class="space-y-6">
+        <div class="flex items-center justify-between">
+          <h2 class="text-2xl font-semibold tracking-tight">Restaurant Cards</h2>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-neutral-500">States</span>
+            <div class="flex gap-1">
+              <span class="px-2 py-1 rounded bg-white ring-1 ring-neutral-200 text-[11px]">Default</span>
+              <span class="px-2 py-1 rounded bg-white ring-1 ring-neutral-200 text-[11px]">Trending</span>
+              <span class="px-2 py-1 rounded bg-white ring-1 ring-neutral-200 text-[11px]">Friend Saved</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Variant A: Feed Card (Horizontal) -->
+        <div class="grid lg:grid-cols-2 gap-6">
+          <div class="p-4 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <h3 class="text-lg font-medium tracking-tight mb-3">Variant A • Feed Card (Horizontal)</h3>
+            <div class="flex gap-4">
+              <!-- Image left -->
+              <div class="relative w-[120px] h-[140px] rounded-xl overflow-hidden ring-1 ring-neutral-200">
+                <img src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=1200&auto=format&fit=crop" alt="Restaurant" class="w-full h-full object-cover">
+                <!-- Save button overlay -->
+                <button class="absolute top-2 right-2 p-2 rounded-full bg-neutral-900/60 backdrop-blur-md ring-1 ring-black/10 hover:ring-black/20 hover:bg-neutral-900/70 active:scale-95 transition" aria-label="Save">
+                  <i data-lucide="bookmark" class="w-4 h-4 text-white"></i>
+                </button>
+                <!-- Trending badge -->
+                <div class="absolute bottom-2 left-2 px-2 py-1 rounded-full bg-red-500/20 ring-1 ring-red-500/30 text-[11px] flex items-center gap-1">
+                  <i data-lucide="flame" class="w-3.5 h-3.5 text-red-600"></i><span class="text-red-700">Trending</span>
+                </div>
+                <!-- Campaign badge -->
+                <div class="absolute bottom-2 right-2 px-2 py-1 rounded-full bg-emerald-500/15 ring-1 ring-emerald-500/30 text-[11px] flex items-center gap-1">
+                  <i data-lucide="badge-dollar-sign" class="w-3.5 h-3.5 text-emerald-600"></i><span class="text-emerald-700">Campaign</span>
+                </div>
+              </div>
+              <!-- Content right -->
+              <div class="flex-1 flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h4 class="text-[18px] font-semibold tracking-tight">Porta Rossa</h4>
+                    <span class="text-[11px] px-1.5 py-0.5 rounded bg-[#FFFAF2] text-neutral-900 ring-1 ring-black/10">Italian</span>
+                    <span class="text-[11px] px-1.5 py-0.5 rounded bg-white ring-1 ring-neutral-200">$ • 0.8 mi</span>
+                  </div>
+                  <p class="mt-1 text-sm text-neutral-600 line-clamp-2">Handmade pasta, wood-fired pizza, seasonal antipasti. Cozy patio seating.</p>
+                </div>
+                <div class="flex items-center justify-between mt-3">
+                  <!-- Social proof -->
+                  <div class="flex -space-x-2 items-center">
+                    <img class="w-6 h-6 rounded-full ring-2 ring-white" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&auto=format&fit=crop" alt="Friend">
+                    <img class="w-6 h-6 rounded-full ring-2 ring-white" src="https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?q=80&w=200&auto=format&fit=crop" alt="Friend">
+                    <span class="ml-3 text-xs text-neutral-500">2 friends saved</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button class="px-3 h-9 rounded-full bg-[#FFAD27] text-neutral-900 font-medium text-sm hover:brightness-110 active:scale-95 transition shadow-[0_2px_8px_rgba(255,173,39,0.25)]">Save</button>
+                    <button class="w-9 h-9 rounded-full bg-white ring-1 ring-neutral-200 hover:bg-neutral-50 active:scale-95 transition" aria-label="Share">
+                      <i data-lucide="share-2" class="w-4.5 h-4.5"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Variant B: Grid Card (Square) -->
+          <div class="p-4 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <h3 class="text-lg font-medium tracking-tight mb-3">Variant B • Grid Card (Square)</h3>
+            <div class="grid grid-cols-2 gap-4">
+              <!-- Card -->
+              <div class="rounded-xl overflow-hidden ring-1 ring-neutral-200">
+                <div class="aspect-square relative">
+                  <img src="https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=1200&auto=format&fit=crop" alt="Dish" class="w-full h-full object-cover">
+                  <button class="absolute top-2 right-2 p-2 rounded-full bg-neutral-900/60 backdrop-blur ring-1 ring-black/10 hover:bg-neutral-900/70 active:scale-95 transition" aria-label="Bookmark">
+                    <i data-lucide="bookmark" class="w-4 h-4 text-white"></i>
+                  </button>
+                  <div class="absolute bottom-2 left-2 px-1.5 py-0.5 rounded bg-red-500 text-white text-[10px] font-medium">NEW</div>
+                </div>
+                <div class="p-3 bg-white">
+                  <div class="flex items-center justify-between">
+                    <h4 class="text-[15px] font-semibold tracking-tight">Sunrise Cafe</h4>
+                    <span class="text-[11px] text-neutral-600">$$</span>
+                  </div>
+                  <p class="text-xs text-neutral-500 mt-0.5">Breakfast • 1.2 mi</p>
+                </div>
+              </div>
+              <!-- Skeleton State -->
+              <div class="rounded-xl overflow-hidden ring-1 ring-neutral-200">
+                <div class="aspect-square bg-neutral-100 animate-pulse"></div>
+                <div class="p-3 bg-white">
+                  <div class="h-3 w-24 rounded bg-neutral-200 animate-pulse"></div>
+                  <div class="h-3 w-20 rounded bg-neutral-200 animate-pulse mt-2"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Variant C: Detail Card (Large) -->
+          <div class="lg:col-span-2 p-4 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <h3 class="text-lg font-medium tracking-tight mb-3">Variant C • Detail Card (Large)</h3>
+            <div class="overflow-hidden rounded-xl ring-1 ring-neutral-200">
+              <div class="relative">
+                <div class="aspect-video">
+                  <img src="https://images.unsplash.com/photo-1621619856624-42fd193a0661?w=1080&q=80" alt="Hero" class="w-full h-full object-cover">
+                </div>
+                <div class="absolute inset-0 bg-gradient-to-t from-neutral-900/80 via-neutral-900/10 to-transparent"></div>
+                <!-- Floating actions -->
+                <div class="absolute top-3 right-3 flex gap-2">
+                  <button class="w-10 h-10 rounded-full bg-[#FFAD27] text-neutral-900 ring-1 ring-black/10 hover:brightness-110 active:scale-95 transition shadow-[0_4px_12px_rgba(255,173,39,0.35)]" aria-label="Save">
+                    <i data-lucide="bookmark-plus" class="w-5 h-5 mx-auto my-auto"></i>
+                  </button>
+                  <button class="w-10 h-10 rounded-full bg-white/90 backdrop-blur ring-1 ring-neutral-200 hover:bg-white active:scale-95 transition" aria-label="Share">
+                    <i data-lucide="share-2" class="w-5 h-5 mx-auto my-auto"></i>
+                  </button>
+                </div>
+                <!-- Text overlay -->
+                <div class="absolute bottom-0 left-0 right-0 p-4 text-white drop-shadow">
+                  <h4 class="text-2xl font-semibold tracking-tight">Noon Kitchen</h4>
+                  <p class="text-sm text-neutral-100/90">Modern Korean • $$$ • 1.5 mi • 4.6 ★ (1.2k)</p>
+                </div>
+              </div>
+              <div class="p-4 bg-white">
+                <p class="text-sm text-neutral-700 line-clamp-3" id="restDesc">
+                  A contemporary take on classic Korean comfort food with farm-to-table sourcing.
+                  Try the galbi, kimchi pancake, and seasonal banchan flight. Weeknight tasting menus available.
+                </p>
+                <button id="expandDesc" class="mt-2 text-sm text-[#FFAD27] hover:underline active:opacity-70 transition">Read more</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 1.1 Color System -->
+      <section id="colors" class="space-y-6">
+        <div class="flex items-center justify-between">
+          <h2 class="text-2xl font-semibold tracking-tight">Color System</h2>
+          <div class="text-xs text-neutral-500">Contrast calculated live</div>
+        </div>
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Color Card Template -->
+          <div class="p-4 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <div class="flex items-center justify-between">
+              <h3 class="font-medium">Troodie Gold</h3>
+              <span class="text-xs text-neutral-700">#FFAD27</span>
+            </div>
+            <div class="mt-3 h-16 rounded-lg ring-1 ring-neutral-200" style="background:#FFAD27;"></div>
+            <ul class="mt-3 text-sm text-neutral-700 space-y-1">
+              <li>Use: Primary CTAs, saves, highlights</li>
+              <li id="cr-gold" class="text-xs text-neutral-500">Contrast: …</li>
+              <li>Gradients: #FFAD27 → #E89A1F</li>
+            </ul>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <div class="flex items-center justify-between">
+              <h3 class="font-medium">Troodie Gold Dark</h3>
+              <span class="text-xs text-neutral-700">#E89A1F</span>
+            </div>
+            <div class="mt-3 h-16 rounded-lg ring-1 ring-neutral-200" style="background:#E89A1F;"></div>
+            <ul class="mt-3 text-sm text-neutral-700 space-y-1">
+              <li>Use: Pressed/active states</li>
+              <li id="cr-gold-dark" class="text-xs text-neutral-500">Contrast: …</li>
+              <li>Gradients: #FFAD27 → #E89A1F</li>
+            </ul>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <div class="flex items-center justify-between">
+              <h3 class="font-medium">Troodie Gold Light</h3>
+              <span class="text-xs text-neutral-700">#FFF4E0</span>
+            </div>
+            <div class="mt-3 h-16 rounded-lg ring-1 ring-neutral-200" style="background:#FFF4E0;"></div>
+            <ul class="mt-3 text-sm text-neutral-700 space-y-1">
+              <li>Use: Light backgrounds</li>
+              <li id="cr-gold-light" class="text-xs text-neutral-500">Contrast: …</li>
+              <li>Gradients: #FFF4E0 → #FFFAF2</li>
+            </ul>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <div class="flex items-center justify-between">
+              <h3 class="font-medium">Troodie Gold Faint</h3>
+              <span class="text-xs text-neutral-700">#FFFAF2</span>
+            </div>
+            <div class="mt-3 h-16 rounded-lg ring-1 ring-neutral-200" style="background:#FFFAF2;"></div>
+            <ul class="mt-3 text-sm text-neutral-700 space-y-1">
+              <li>Use: Very light tints</li>
+              <li id="cr-gold-faint" class="text-xs text-neutral-500">Contrast: …</li>
+              <li>Gradients: #FFF4E0 → #FFFAF2</li>
+            </ul>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <div class="flex items-center justify-between">
+              <h3 class="font-medium">Success Green</h3>
+              <span class="text-xs text-neutral-700">#4CAF50</span>
+            </div>
+            <div class="mt-3 h-16 rounded-lg ring-1 ring-neutral-200" style="background:#4CAF50;"></div>
+            <ul class="mt-3 text-sm text-neutral-700 space-y-1">
+              <li>Use: Success, verified</li>
+              <li id="cr-green" class="text-xs text-neutral-500">Contrast: …</li>
+              <li>Gradient: #4CAF50 → #3D8B40</li>
+            </ul>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <div class="flex items-center justify-between">
+              <h3 class="font-medium">Warning Amber</h3>
+              <span class="text-xs text-neutral-700">#FF9800</span>
+            </div>
+            <div class="mt-3 h-16 rounded-lg ring-1 ring-neutral-200" style="background:#FF9800;"></div>
+            <ul class="mt-3 text-sm text-neutral-700 space-y-1">
+              <li>Use: Busy, caution</li>
+              <li id="cr-amber" class="text-xs text-neutral-500">Contrast: …</li>
+              <li>Gradient: #FFAD27 → #FF9800</li>
+            </ul>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <div class="flex items-center justify-between">
+              <h3 class="font-medium">Error Red</h3>
+              <span class="text-xs text-neutral-700">#F44336</span>
+            </div>
+            <div class="mt-3 h-16 rounded-lg ring-1 ring-neutral-200" style="background:#F44336;"></div>
+            <ul class="mt-3 text-sm text-neutral-700 space-y-1">
+              <li>Use: Errors</li>
+              <li id="cr-red" class="text-xs text-neutral-500">Contrast: …</li>
+              <li>Gradient: #F44336 → #C62828</li>
+            </ul>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <div class="flex items-center justify-between">
+              <h3 class="font-medium">Info Blue</h3>
+              <span class="text-xs text-neutral-700">#2196F3</span>
+            </div>
+            <div class="mt-3 h-16 rounded-lg ring-1 ring-neutral-200" style="background:#2196F3;"></div>
+            <ul class="mt-3 text-sm text-neutral-700 space-y-1">
+              <li>Use: Tips, links</li>
+              <li id="cr-blue" class="text-xs text-neutral-500">Contrast: …</li>
+              <li>Gradient: #2196F3 → #1976D2</li>
+            </ul>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <div class="flex items-center justify-between">
+              <h3 class="font-medium">Creator Purple</h3>
+              <span class="text-xs text-neutral-700">#7C4DFF</span>
+            </div>
+            <div class="mt-3 h-16 rounded-lg ring-1 ring-neutral-200" style="background:#7C4DFF;"></div>
+            <ul class="mt-3 text-sm text-neutral-700 space-y-1">
+              <li>Use: Creator features</li>
+              <li id="cr-purple" class="text-xs text-neutral-500">Contrast: …</li>
+              <li>Gradient: #7C4DFF → #5E35B1</li>
+            </ul>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <div class="flex items-center justify-between">
+              <h3 class="font-medium">Business Teal</h3>
+              <span class="text-xs text-neutral-700">#00BCD4</span>
+            </div>
+            <div class="mt-3 h-16 rounded-lg ring-1 ring-neutral-200" style="background:#00BCD4;"></div>
+            <ul class="mt-3 text-sm text-neutral-700 space-y-1">
+              <li>Use: Business owner features</li>
+              <li id="cr-teal" class="text-xs text-neutral-500">Contrast: …</li>
+              <li>Gradient: #00BCD4 → #0097A7</li>
+            </ul>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <div class="flex items-center justify-between">
+              <h3 class="font-medium">Neutrals</h3>
+              <span class="text-xs text-neutral-700">Black, Grays, White</span>
+            </div>
+            <div class="mt-3 grid grid-cols-5 gap-2">
+              <div class="h-10 rounded ring-1 ring-neutral-200" style="background:#1A1A1A;"></div>
+              <div class="h-10 rounded ring-1 ring-neutral-200" style="background:#111827;"></div>
+              <div class="h-10 rounded ring-1 ring-neutral-200" style="background:#4B5563;"></div>
+              <div class="h-10 rounded ring-1 ring-neutral-200" style="background:#D1D5DB;"></div>
+              <div class="h-10 rounded ring-1 ring-neutral-200" style="background:#FFFFFF;"></div>
+            </div>
+            <ul class="mt-3 text-sm text-neutral-700 space-y-1">
+              <li id="cr-neutrals" class="text-xs text-neutral-500">Contrast: auto</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- 1.2 Typography -->
+      <section id="typography" class="space-y-6">
+        <h2 class="text-2xl font-semibold tracking-tight">Typography System</h2>
+        <div class="grid lg:grid-cols-2 gap-6">
+          <div class="p-5 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <div class="space-y-3">
+              <div>
+                <p class="text-xs text-neutral-500">Display • 34px • tracking-tight</p>
+                <h1 class="text-[34px] leading-[1.2] font-semibold tracking-tight">Discover food you’ll love, together.</h1>
+              </div>
+              <div>
+                <p class="text-xs text-neutral-500">Headline • 28px</p>
+                <h2 class="text-[28px] leading-[1.3] font-semibold tracking-tight">Nearby Highlights</h2>
+              </div>
+              <div>
+                <p class="text-xs text-neutral-500">Title • 22px</p>
+                <h3 class="text-[22px] leading-[1.3] font-semibold tracking-tight">Featured Boards</h3>
+              </div>
+              <div>
+                <p class="text-xs text-neutral-500">Body • 17px</p>
+                <p class="text-[17px] leading-[1.5] text-neutral-700">Troodie blends social discovery with real-time signals, making it effortless to decide where to go.</p>
+              </div>
+              <div>
+                <p class="text-xs text-neutral-500">Secondary • 15px</p>
+                <p class="text-[15px] leading-[1.5] text-neutral-600">Contextual hints, metadata, and timestamps appear here.</p>
+              </div>
+              <div>
+                <p class="text-xs text-neutral-500">Caption • 13px • Micro • 11px</p>
+                <p class="text-[13px] leading-[1.45] text-neutral-600">Caption example • <span class="text-[11px] text-neutral-500">Micro label</span></p>
+              </div>
+            </div>
+            <div class="mt-4 grid grid-cols-3 gap-3 text-sm">
+              <div class="p-3 rounded-xl bg-white ring-1 ring-neutral-200">
+                <p class="text-xs text-neutral-500">Weight</p>
+                <div class="mt-2 space-y-1">
+                  <p class="font-normal">Regular</p>
+                  <p class="font-medium">Medium</p>
+                  <p class="font-semibold">Semibold</p>
+                </div>
+              </div>
+              <div class="p-3 rounded-xl bg-white ring-1 ring-neutral-200">
+                <p class="text-xs text-neutral-500">Line Height</p>
+                <div class="mt-2 space-y-1">
+                  <span class="px-2 py-0.5 rounded bg-white ring-1 ring-neutral-200 text-xs">Tight 1.2</span>
+                  <span class="px-2 py-0.5 rounded bg-white ring-1 ring-neutral-200 text-xs">Normal 1.5</span>
+                  <span class="px-2 py-0.5 rounded bg-white ring-1 ring-neutral-200 text-xs">Relaxed 1.75</span>
+                </div>
+              </div>
+              <div class="p-3 rounded-xl bg-white ring-1 ring-neutral-200">
+                <p class="text-xs text-neutral-500">iOS Dynamic Type</p>
+                <p class="mt-2 text-xs text-neutral-700">Use the Type slider to preview 100%–160%.</p>
+              </div>
+            </div>
+          </div>
+          <div class="p-5 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <h3 class="text-lg font-medium tracking-tight">Specimens</h3>
+            <div class="mt-3 grid gap-3">
+              <div class="p-3 rounded-lg bg-white ring-1 ring-neutral-200">
+                <p class="text-xs text-neutral-500">Title w/ ellipsis</p>
+                <p class="text-[22px] font-semibold tracking-tight truncate">Legendary Dumpling House with a Surprisingly Long Name</p>
+              </div>
+              <div class="p-3 rounded-lg bg-white ring-1 ring-neutral-200">
+                <p class="text-xs text-neutral-500">Multiline Body (2 lines)</p>
+                <p class="text-[17px] leading-[1.5] text-neutral-700 line-clamp-2">House-made dumplings, generous fillings, hand-pulled noodles. Vegan options available.</p>
+              </div>
+              <div class="p-3 rounded-lg bg-white ring-1 ring-neutral-200">
+                <p class="text-xs text-neutral-500">Metadata Row</p>
+                <p class="text-[13px] text-neutral-600">Open until 10 PM • $$ • 0.4 mi • Outdoor seating</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 1.3 Spacing & Grid -->
+      <section id="spacing" class="space-y-6">
+        <h2 class="text-2xl font-semibold tracking-tight">Spacing & Grid</h2>
+        <div class="p-5 rounded-2xl bg-white ring-1 ring-neutral-200">
+          <div class="grid md:grid-cols-3 gap-6">
+            <div>
+              <p class="text-sm text-neutral-700">4pt System</p>
+              <div class="mt-3 flex flex-wrap gap-2 items-end">
+                <div class="w-6 h-1 rounded bg-neutral-200"></div>
+                <div class="w-10 h-2 rounded bg-neutral-200"></div>
+                <div class="w-14 h-3 rounded bg-neutral-200"></div>
+                <div class="w-16 h-4 rounded bg-neutral-200"></div>
+                <div class="w-20 h-6 rounded bg-neutral-300"></div>
+                <div class="w-24 h-8 rounded bg-neutral-300"></div>
+                <div class="w-28 h-12 rounded bg-neutral-300"></div>
+                <div class="w-32 h-16 rounded bg-neutral-300"></div>
+              </div>
+            </div>
+            <div>
+              <p class="text-sm text-neutral-700">Safe Areas</p>
+              <div class="mt-3 relative h-40 rounded-xl bg-white ring-1 ring-neutral-200 overflow-hidden">
+                <div class="absolute inset-0 border-2 border-dashed border-neutral-200 rounded-xl"></div>
+                <div id="safeOverlay" class="absolute inset-x-0 top-0 h-4 bg-[#FFAD27]/20 hidden"></div>
+                <div id="safeOverlayBottom" class="absolute inset-x-0 bottom-0 h-6 bg-[#FFAD27]/20 hidden"></div>
+                <div class="absolute inset-0 grid place-items-center text-xs text-neutral-500">Toggle Safe Areas in Quick Controls</div>
+              </div>
+            </div>
+            <div>
+              <p class="text-sm text-neutral-700">Bars</p>
+              <div class="mt-3 space-y-2 text-xs text-neutral-600">
+                <div class="flex items-center justify-between">
+                  <span>Tab bar</span><span>49px + safe area</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span>Navigation bar</span><span>44px + safe area</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span>Content padding</span><span>16px–24px</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span>Card spacing</span><span>12px inside • 16px between</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 1.4 Iconography -->
+      <section id="icons" class="space-y-6">
+        <h2 class="text-2xl font-semibold tracking-tight">Iconography</h2>
+        <div class="p-5 rounded-2xl bg-white ring-1 ring-neutral-200">
+          <div class="flex items-center justify-between">
+            <p class="text-sm text-neutral-700">Base size 24x24, rounded corners, stroke 1.5, tinted capability</p>
+            <div class="flex items-center gap-2 text-xs">
+              <span class="px-2 py-1 rounded bg-white ring-1 ring-neutral-200">Outlined</span>
+              <span class="px-2 py-1 rounded bg-[#FFAD27]/10 ring-1 ring-[#FFAD27]/30 text-[#FFAD27]">Tinted</span>
+            </div>
+          </div>
+          <div class="mt-4 grid sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <!-- Navigation -->
+            <div class="p-3 rounded-xl bg-white ring-1 ring-neutral-200">
+              <p class="text-xs text-neutral-500 mb-2">Navigation</p>
+              <div class="flex items-center gap-2">
+                <i data-lucide="compass" class="w-6 h-6"></i>
+                <i data-lucide="map" class="w-6 h-6"></i>
+                <i data-lucide="plus" class="w-6 h-6 text-[#FFAD27]"></i>
+                <i data-lucide="bookmark" class="w-6 h-6"></i>
+                <i data-lucide="user" class="w-6 h-6"></i>
+              </div>
+            </div>
+            <!-- Actions -->
+            <div class="p-3 rounded-xl bg-white ring-1 ring-neutral-200">
+              <p class="text-xs text-neutral-500 mb-2">Actions</p>
+              <div class="flex items-center gap-2">
+                <i data-lucide="bookmark-plus" class="w-6 h-6 text-[#FFAD27]"></i>
+                <i data-lucide="share-2" class="w-6 h-6"></i>
+                <i data-lucide="heart" class="w-6 h-6"></i>
+                <i data-lucide="message-circle" class="w-6 h-6"></i>
+                <i data-lucide="user-plus" class="w-6 h-6"></i>
+              </div>
+            </div>
+            <!-- Categories -->
+            <div class="p-3 rounded-xl bg-white ring-1 ring-neutral-200">
+              <p class="text-xs text-neutral-500 mb-2">Categories</p>
+              <div class="flex items-center gap-2">
+                <i data-lucide="croissant" class="w-6 h-6"></i>
+                <i data-lucide="sandwich" class="w-6 h-6"></i>
+                <i data-lucide="utensils" class="w-6 h-6"></i>
+                <i data-lucide="coffee" class="w-6 h-6"></i>
+                <i data-lucide="martini" class="w-6 h-6"></i>
+              </div>
+            </div>
+            <!-- Status -->
+            <div class="p-3 rounded-xl bg-white ring-1 ring-neutral-200">
+              <p class="text-xs text-neutral-500 mb-2">Status</p>
+              <div class="flex items-center gap-2">
+                <i data-lucide="badge-check" class="w-6 h-6 text-[#2196F3]"></i>
+                <i data-lucide="circle-dot" class="w-6 h-6 text-[#4CAF50]"></i>
+                <i data-lucide="clock" class="w-6 h-6 text-[#FF9800]"></i>
+                <i data-lucide="x-octagon" class="w-6 h-6 text-[#F44336]"></i>
+                <i data-lucide="flame" class="w-6 h-6 text-red-500"></i>
+              </div>
+            </div>
+            <!-- Utilities -->
+            <div class="p-3 rounded-xl bg-white ring-1 ring-neutral-200">
+              <p class="text-xs text-neutral-500 mb-2">Utilities</p>
+              <div class="flex items-center gap-2">
+                <i data-lucide="search" class="w-6 h-6"></i>
+                <i data-lucide="filter" class="w-6 h-6"></i>
+                <i data-lucide="settings" class="w-6 h-6"></i>
+                <i data-lucide="pencil" class="w-6 h-6"></i>
+                <i data-lucide="more-horizontal" class="w-6 h-6"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. Buttons -->
+      <section id="buttons" class="space-y-6">
+        <h2 class="text-2xl font-semibold tracking-tight">Buttons</h2>
+        <div class="grid lg:grid-cols-2 gap-6">
+          <!-- Primary -->
+          <div class="p-5 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <h3 class="text-lg font-medium tracking-tight mb-2">Primary Button</h3>
+            <div class="flex flex-wrap items-center gap-3">
+              <button class="px-5 h-12 rounded-full bg-[#FFAD27] text-neutral-900 font-medium shadow-[0_2px_8px_rgba(255,173,39,0.25)] hover:brightness-110 active:scale-95 transition">Large</button>
+              <button class="px-4 h-10 rounded-full bg-[#FFAD27] text-neutral-900 font-medium shadow-[0_2px_8px_rgba(255,173,39,0.25)] hover:brightness-110 active:scale-95 transition">Medium</button>
+              <button class="px-3 h-8 rounded-full bg-[#FFAD27] text-neutral-900 text-sm font-medium shadow-[0_2px_8px_rgba(255,173,39,0.25)] hover:brightness-110 active:scale-95 transition">Small</button>
+              <button class="px-4 h-10 rounded-full bg-[#E89A1F] text-neutral-900 font-medium active:scale-95 transition">Pressed</button>
+              <button class="px-4 h-10 rounded-full bg-neutral-100 text-neutral-400 font-medium ring-1 ring-neutral-200 cursor-not-allowed">Disabled</button>
+              <button class="px-4 h-10 rounded-full bg-[#FFAD27] text-neutral-900 font-medium flex items-center gap-2 shadow-[0_2px_8px_rgba(255,173,39,0.25)]">
+                <span class="sr-only">Loading</span>
+                <span class="w-4 h-4 rounded-full border-2 border-neutral-900 border-t-transparent animate-spin"></span>
+                Loading
+              </button>
+              <button class="h-10 w-10 rounded-full bg-[#FFAD27] text-neutral-900 grid place-items-center hover:brightness-110 active:scale-95 transition">
+                <i data-lucide="plus" class="w-5 h-5"></i>
+              </button>
+              <button class="px-4 h-10 rounded-full bg-[#FFAD27] text-neutral-900 font-medium flex items-center gap-2 hover:brightness-110 active:scale-95 transition">
+                <i data-lucide="bookmark-plus" class="w-4 h-4"></i> Save
+              </button>
+            </div>
+          </div>
+          <!-- Secondary -->
+          <div class="p-5 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <h3 class="text-lg font-medium tracking-tight mb-2">Secondary Button</h3>
+            <div class="flex flex-wrap items-center gap-3">
+              <button class="px-4 h-10 rounded-full border-2 border-[#FFAD27] text-[#FFAD27] font-medium hover:bg-[#FFAD27]/10 active:scale-95 transition">Outline</button>
+              <button class="px-4 h-10 rounded-full bg-[#FFFAF2] text-neutral-900 font-medium hover:bg-[#FFF4E0] active:scale-95 transition">Ghost</button>
+              <button class="px-4 h-10 rounded-full border-2 border-[#FFAD27] text-[#FFAD27]/60 font-medium cursor-not-allowed">Disabled</button>
+              <button class="text-sm text-[#FFAD27] hover:underline active:opacity-70">Text Button</button>
+            </div>
+          </div>
+          <!-- FAB -->
+          <div class="p-5 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <h3 class="text-lg font-medium tracking-tight mb-2">Floating Action Button</h3>
+            <div class="relative h-32 rounded-xl bg-white ring-1 ring-neutral-200 overflow-hidden">
+              <div class="absolute bottom-4 right-4 flex items-end gap-2">
+                <!-- Sub actions -->
+                <div id="fabActions" class="flex flex-col gap-2 opacity-0 translate-y-2 pointer-events-none transition">
+                  <button class="px-3 h-9 rounded-full bg-white backdrop-blur ring-1 ring-neutral-200 text-sm hover:bg-neutral-50 active:scale-95 transition flex items-center gap-2">
+                    <i data-lucide="camera" class="w-4 h-4"></i> Add Photo
+                  </button>
+                  <button class="px-3 h-9 rounded-full bg-white backdrop-blur ring-1 ring-neutral-200 text-sm hover:bg-neutral-50 active:scale-95 transition flex items-center gap-2">
+                    <i data-lucide="file-text" class="w-4 h-4"></i> Add Review
+                  </button>
+                </div>
+                <!-- FAB -->
+                <button id="fab" class="w-14 h-14 rounded-full text-neutral-900 shadow-[0_4px_12px_rgba(255,173,39,0.35)] ring-1 ring-black/10 active:scale-95 transition grid place-items-center" style="background:linear-gradient(180deg,#FFAD27, #E89A1F);">
+                  <i id="fabIcon" data-lucide="plus" class="w-6 h-6"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <!-- Icon Buttons -->
+          <div class="p-5 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <h3 class="text-lg font-medium tracking-tight mb-2">Icon Buttons</h3>
+            <div class="flex flex-wrap items-center gap-3">
+              <button class="w-11 h-11 rounded-full bg-white ring-1 ring-neutral-200 hover:bg-neutral-50 active:scale-95 transition relative">
+                <i data-lucide="settings" class="w-5 h-5 mx-auto my-auto"></i>
+              </button>
+              <button class="w-11 h-11 rounded-full bg-[#FFFAF2] text-neutral-900 ring-1 ring-black/10 hover:bg-[#FFF4E0] active:scale-95 transition relative">
+                <i data-lucide="bookmark" class="w-5 h-5 mx-auto my-auto"></i>
+                <span class="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-[10px] grid place-items-center text-white ring-2 ring-white">3</span>
+              </button>
+              <button class="w-11 h-11 rounded-full bg-white ring-1 ring-neutral-200 opacity-50 cursor-not-allowed">
+                <i data-lucide="share-2" class="w-5 h-5 mx-auto my-auto"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. Cards -->
+      <section id="cards" class="space-y-6">
+        <h2 class="text-2xl font-semibold tracking-tight">Additional Cards</h2>
+        <div class="grid lg:grid-cols-2 gap-6">
+          <!-- Board Card -->
+          <div class="p-5 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <h3 class="text-lg font-medium tracking-tight mb-3">Board Card</h3>
+            <div class="relative rounded-xl overflow-hidden ring-1 ring-neutral-200">
+              <div class="grid grid-cols-2 grid-rows-2 h-40">
+                <img src="https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?q=80&w=1200&auto=format&fit=crop" class="object-cover w-full h-full" alt="">
+                <img src="https://images.unsplash.com/photo-1642615835477-d303d7dc9ee9?w=1080&q=80" class="object-cover w-full h-full" alt="">
+                <img src="https://images.unsplash.com/photo-1498654200943-1088dd4438ae?q=80&w=1200&auto=format&fit=crop" class="object-cover w-full h-full" alt="">
+                <img src="https://images.unsplash.com/photo-1460306855393-0410f61241c7?q=80&w=1200&auto=format&fit=crop" class="object-cover w-full h-full" alt="">
+              </div>
+              <div class="absolute inset-0 bg-gradient-to-t from-neutral-900/80 via-transparent to-transparent"></div>
+              <div class="absolute bottom-0 left-0 right-0 p-3 flex items-center justify-between text-white drop-shadow">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h4 class="text-[18px] font-semibold tracking-tight">Date Night Gems</h4>
+                    <span class="px-1.5 py-0.5 text-[11px] rounded bg-purple-500/20 ring-1 ring-purple-500/30 text-purple-100 flex items-center gap-1">
+                      <i data-lucide="crown" class="w-3.5 h-3.5"></i> Creator
+                    </span>
+                  </div>
+                  <p class="text-xs text-neutral-100/90">12 places</p>
+                </div>
+                <button class="w-9 h-9 rounded-full bg-white/90 backdrop-blur ring-1 ring-neutral-200 hover:bg-white active:scale-95 transition" aria-label="Share">
+                  <i data-lucide="share-2" class="w-4.5 h-4.5 mx-auto my-auto"></i>
+                </button>
+              </div>
+              <!-- Public/Private -->
+              <div class="absolute top-2 left-2 px-2 py-1 rounded-full bg-white/90 ring-1 ring-neutral-200 text-[11px]">Public</div>
+              <!-- Collaborative avatars -->
+              <div class="absolute top-2 right-2 flex -space-x-2">
+                <img class="w-6 h-6 rounded-full ring-2 ring-white" src="https://images.unsplash.com/photo-1554151228-14d9def656e4?q=80&w=200&auto=format&fit=crop" alt="">
+                <img class="w-6 h-6 rounded-full ring-2 ring-white" src="https://images.unsplash.com/photo-1527980965255-d3b416303d12?q=80&w=200&auto=format&fit=crop" alt="">
+                <div class="w-6 h-6 rounded-full bg-white/90 ring-2 ring-white grid place-items-center text-[10px]">+4</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- User / Creator Card -->
+          <div class="p-5 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <h3 class="text-lg font-medium tracking-tight mb-3">User / Creator Card</h3>
+            <div class="flex items-start gap-4">
+              <div class="relative">
+                <img class="w-16 h-16 rounded-full object-cover ring-2 ring-neutral-200" src="https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?q=80&w=200&auto=format&fit=crop" alt="">
+                <span class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#2196F3] grid place-items-center ring-2 ring-white">
+                  <i data-lucide="check" class="w-3 h-3 text-white"></i>
+                </span>
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2">
+                  <p class="font-semibold tracking-tight">Maya Chen</p>
+                  <span class="px-1.5 py-0.5 text-[11px] rounded bg-purple-500/10 ring-1 ring-purple-500/20 text-purple-700 flex items-center gap-1">
+                    <i data-lucide="wand-2" class="w-3.5 h-3.5"></i> Creator
+                  </span>
+                  <span class="px-1.5 py-0.5 text-[11px] rounded bg-[#00BCD4]/10 ring-1 ring-[#00BCD4]/20 text-[#007c8c] flex items-center gap-1">
+                    <i data-lucide="badge-check" class="w-3.5 h-3.5"></i> Business
+                  </span>
+                </div>
+                <p class="text-sm text-neutral-700">Brunch hunter • Pasta loyalist • SF / NYC</p>
+                <div class="mt-2 flex items-center gap-4 text-xs text-neutral-600">
+                  <span><b class="text-neutral-800 font-medium">12.3k</b> followers</span>
+                  <span><b class="text-neutral-800 font-medium">408</b> saves</span>
+                  <span><b class="text-neutral-800 font-medium">9</b> boards</span>
+                </div>
+                <div class="mt-3 flex items-center gap-2">
+                  <button class="px-4 h-9 rounded-full bg-[#FFAD27] text-neutral-900 font-medium hover:brightness-110 active:scale-95 transition">Follow</button>
+                  <button class="px-3 h-9 rounded-full bg-white ring-1 ring-neutral-200 hover:bg-neutral-50 active:scale-95 transition">Message</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Campaign Card -->
+          <div class="p-5 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <h3 class="text-lg font-medium tracking-tight mb-3">Campaign Card</h3>
+            <div class="overflow-hidden rounded-xl ring-1 ring-neutral-200">
+              <div class="relative h-36">
+                <img src="https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=1200&auto=format&fit=crop" class="w-full h-full object-cover" alt="">
+                <div class="absolute top-2 left-2 px-2 py-1 rounded-full bg-white/90 ring-1 ring-neutral-200 text-[11px]">Open</div>
+              </div>
+              <div class="p-4 bg-white">
+                <div class="flex items-center justify-between">
+                  <p class="font-semibold tracking-tight">Summer Patio Launch</p>
+                  <span class="text-xs text-neutral-600">Ends in 10 days</span>
+                </div>
+                <p class="text-sm text-neutral-700 mt-1">Highlight the new aperitivo menu and patio events.</p>
+                <div class="mt-3 grid grid-cols-3 gap-3 text-xs">
+                  <div class="p-2 rounded-lg bg-white ring-1 ring-neutral-200">
+                    <p class="text-neutral-600">Budget</p>
+                    <p class="text-neutral-800 font-medium">$2,500</p>
+                  </div>
+                  <div class="p-2 rounded-lg bg-white ring-1 ring-neutral-200">
+                    <p class="text-neutral-600">Match</p>
+                    <p class="text-neutral-800 font-medium">86%</p>
+                  </div>
+                  <div class="p-2 rounded-lg bg-white ring-1 ring-neutral-200">
+                    <p class="text-neutral-600">Status</p>
+                    <p class="text-neutral-800 font-medium">Invited</p>
+                  </div>
+                </div>
+                <div class="mt-3 flex items-center gap-2">
+                  <button class="px-4 h-9 rounded-full bg-[#FFAD27] text-neutral-900 font-medium hover:brightness-110 active:scale-95 transition">Apply</button>
+                  <button class="px-3 h-9 rounded-full bg-white ring-1 ring-neutral-200 hover:bg-neutral-50 active:scale-95 transition">View</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Activity Card -->
+          <div class="p-5 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <h3 class="text-lg font-medium tracking-tight mb-3">Activity Card</h3>
+            <div class="flex gap-3">
+              <div class="relative">
+                <img class="w-10 h-10 rounded-full object-cover ring-2 ring-neutral-200" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&auto=format&fit=crop" alt="">
+                <span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[#4CAF50] ring-2 ring-white"></span>
+              </div>
+              <div class="flex-1">
+                <p class="text-sm"><b class="font-medium">Alex</b> saved <b class="font-medium">Bento Lab</b> to <b class="font-medium">Lunch Rush</b></p>
+                <p class="text-xs text-neutral-600">2h ago</p>
+              </div>
+              <img src="https://images.unsplash.com/photo-1559847844-5315695dadae?q=80&w=200&auto=format&fit=crop" class="w-12 h-12 rounded-md object-cover ring-1 ring-neutral-200" alt="">
+            </div>
+            <div class="mt-3 flex items-center gap-2">
+              <button class="px-3 h-9 rounded-full bg-white ring-1 ring-neutral-200 hover:bg-neutral-50 active:scale-95 transition flex items-center gap-2">
+                <i data-lucide="message-circle" class="w-4 h-4"></i> Comment
+              </button>
+              <button class="w-9 h-9 rounded-full bg-white ring-1 ring-neutral-200 hover:bg-neutral-50 active:scale-95 transition">
+                <i data-lucide="heart" class="w-4.5 h-4.5 mx-auto my-auto"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Notification Card -->
+          <div class="lg:col-span-2 p-5 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <h3 class="text-lg font-medium tracking-tight mb-3">Notification Card</h3>
+            <div class="flex items-start gap-3 p-3 rounded-xl bg-white ring-1 ring-neutral-200">
+              <div class="w-9 h-9 rounded-full bg-[#FFAD27]/15 text-[#FFAD27] grid place-items-center ring-1 ring-[#FFAD27]/30">
+                <i data-lucide="bell" class="w-4.5 h-4.5"></i>
+              </div>
+              <div class="flex-1">
+                <p class="text-sm"><b class="font-medium">New campaign invite:</b> “Soft Launch Tastings”</p>
+                <p class="text-xs text-neutral-600">Tap to review details and confirm your participation.</p>
+                <div class="mt-2 flex items-center gap-2">
+                  <button class="px-3 h-8 rounded-full bg-[#FFAD27] text-neutral-900 text-sm font-medium hover:brightness-110 active:scale-95 transition">View</button>
+                  <button class="px-3 h-8 rounded-full bg-white ring-1 ring-neutral-200 text-sm hover:bg-neutral-50 active:scale-95 transition">Later</button>
+                </div>
+              </div>
+              <button class="w-8 h-8 rounded-full hover:bg-neutral-50 active:scale-95 transition" aria-label="Dismiss">
+                <i data-lucide="x" class="w-4 h-4 mx-auto my-auto"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. Inputs -->
+      <section id="inputs" class="space-y-6">
+        <h2 class="text-2xl font-semibold tracking-tight">Inputs</h2>
+        <div class="grid lg:grid-cols-2 gap-6">
+          <!-- Text Input -->
+          <div class="p-5 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <h3 class="text-lg font-medium tracking-tight mb-3">Text Inputs</h3>
+            <div class="space-y-3">
+              <!-- Single line -->
+              <div>
+                <label class="text-xs text-neutral-600">Restaurant name</label>
+                <div class="mt-1 relative">
+                  <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500"></i>
+                  <input type="text" placeholder="Search restaurants" class="w-full h-12 pl-9 pr-3 rounded-xl bg-white ring-1 ring-neutral-200 focus:ring-[#FFAD27] outline-none placeholder:text-neutral-400">
+                </div>
+              </div>
+              <!-- Filled -->
+              <div>
+                <label class="text-xs text-neutral-600">Your email</label>
+                <input type="email" value="maya@example.com" class="mt-1 w-full h-12 px-3 rounded-xl bg-white ring-1 ring-neutral-200 focus:ring-[#FFAD27] outline-none">
+                <p class="mt-1 text-xs text-[#4CAF50]">Looks good</p>
+              </div>
+              <!-- Error -->
+              <div>
+                <label class="text-xs text-neutral-600">Username</label>
+                <input type="text" value="maya_" class="mt-1 w-full h-12 px-3 rounded-xl bg-white ring-1 ring-[#F44336] outline-none">
+                <div class="mt-1 flex items-center gap-1 text-xs text-[#F44336]">
+                  <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i> Already taken
+                </div>
+              </div>
+              <!-- Multi-line with counter -->
+              <div>
+                <div class="flex items-center justify-between">
+                  <label class="text-xs text-neutral-600">Bio</label>
+                  <span id="bioCount" class="text-xs text-neutral-500">0 / 140</span>
+                </div>
+                <textarea id="bio" maxlength="140" rows="3" placeholder="Tell people what you love…" class="mt-1 w-full px-3 py-2 rounded-xl bg-white ring-1 ring-neutral-200 focus:ring-[#FFAD27] outline-none placeholder:text-neutral-400"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Search Bar -->
+          <div class="p-5 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-lg font-medium tracking-tight">Search Bar</h3>
+              <span class="text-xs text-neutral-600">Sticky capable</span>
+            </div>
+            <div class="relative">
+              <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500"></i>
+              <input id="search" type="text" placeholder="Dumplings, coffee, brunch…" class="w-full h-12 pl-9 pr-10 rounded-xl bg-white ring-1 ring-neutral-200 focus:ring-[#FFAD27] outline-none">
+              <button id="clearSearch" class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-neutral-50 hidden">
+                <i data-lucide="x" class="w-4 h-4 mx-auto my-auto"></i>
+              </button>
+              <!-- Suggestions -->
+              <div id="suggestions" class="absolute mt-2 left-0 right-0 rounded-xl bg-white ring-1 ring-neutral-200 shadow-xl hidden">
+                <div class="p-2">
+                  <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-neutral-50 flex items-center gap-2">
+                    <i data-lucide="history" class="w-4 h-4 text-neutral-500"></i> <span>“noodles”</span>
+                  </button>
+                  <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-neutral-50 flex items-center gap-2">
+                    <i data-lucide="history" class="w-4 h-4 text-neutral-500"></i> <span>“pho”</span>
+                  </button>
+                  <div class="mt-1 border-t border-neutral-200"></div>
+                  <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-neutral-50 flex items-center gap-2">
+                    <i data-lucide="mic" class="w-4 h-4 text-neutral-500"></i> <span>Voice search</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Select / Dropdown -->
+          <div class="p-5 rounded-2xl bg-white ring-1 ring-neutral-200">
+            <h3 class="text-lg font-medium tracking-tight mb-3">Select / Dropdown</h3>
+            <div class="grid sm:grid-cols-2 gap-3">
+              <div class="relative">
+                <button id="selectBtn" class="w-full h-12 px-3 rounded-xl bg-white ring-1 ring-neutral-200 flex items-center justify-between hover:bg-neutral-50">
+                  <span class="text-sm text-neutral-700">Choose category</span>
+                  <i data-lucide="chevron-down" class="w-4 h-4 text-[#FFAD27]"></i>
+                </button>
+                <div id="selectMenu" class="absolute mt-2 left-0 right-0 rounded-xl bg-white ring-1 ring-neutral-200 shadow-xl hidden">
+                  <div class="max-h-56 overflow-auto p-2">
+                    <label class="flex items-center gap-2 px-2 py-2 rounded hover:bg-neutral-50">
+                      <input type="checkbox" class="peer w-5 h-5 rounded-md ring-1 ring-neutral-200 bg-white accent-[#FFAD27]">
+                      <span>Breakfast</span>
+                    </label>
+                    <label class="flex items-center gap-2 px-2 py-2 rounded hover:bg-neutral-50">
+                      <input type="checkbox" class="peer w-5 h-5 rounded-md ring-1 ring-neutral-200 bg-white accent-[#FFAD27]">
+                      <span>Lunch</span>
+                    </label>
+                    <label class="flex items-center gap-2 px-2 py-2 rounded hover:bg-neutral-50">
+                      <input type="

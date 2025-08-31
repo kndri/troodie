@@ -7,7 +7,7 @@ export const ActivityHeader: React.FC = () => {
   return (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
-        <Bell size={20} color={designTokens.colors.text} />
+        <Bell size={24} color={designTokens.colors.primaryOrange} />
         <Text style={styles.title}>Activity</Text>
       </View>
     </View>

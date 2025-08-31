@@ -1,734 +1,240 @@
-import { BoardCard } from '@/components/BoardCard';
-import { PostCard } from '@/components/PostCard';
-import { RestaurantCard } from '@/components/cards/RestaurantCard';
-import { EditProfileModal } from '@/components/modals/EditProfileModal';
-import SettingsModal from '@/components/modals/SettingsModal';
-import { CommunityTab } from '@/components/profile/CommunityTab';
-import { MenuButton } from '@/components/common/MenuButton';
-import { AuthGate } from '@/components/AuthGate';
-import { designTokens, compactDesign } from '@/constants/designTokens';
-import { useApp } from '@/contexts/AppContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { useOnboarding } from '@/contexts/OnboardingContext';
-import { personas } from '@/data/personas';
-import { useSmoothDataFetch, useSmoothMultiDataFetch } from '@/hooks/useSmoothDataFetch';
-import { supabase } from '@/lib/supabase';
-import { achievementService } from '@/services/achievementService';
-import { boardService } from '@/services/boardService';
-import { communityService } from '@/services/communityService';
-import { postService } from '@/services/postService';
-import { Profile, profileService } from '@/services/profileService';
-import { restaurantService } from '@/services/restaurantService';
-import ShareService from '@/services/shareService';
-import { ToastService } from '@/services/toastService';
-import { Board, BoardRestaurant } from '@/types/board';
-import { RestaurantInfo } from '@/types/core';
-import { PersonaType } from '@/types/onboarding';
-import { PostWithUser } from '@/types/post';
-import { getAvatarUrl, getAvatarUrlWithFallback } from '@/utils/avatarUtils';
-import { useRouter } from 'expo-router';
+/**
+ * PROFILE SCREEN - V1.0 Redesigned
+ * Clean, data-driven profile with better use of space
+ * Focus on real user data and actionable insights
+ */
+
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Award,
-  Bookmark,
-  Camera,
-  Grid3X3,
-  MessageSquare,
-  PenLine,
-  Plus,
-  Settings,
-  Share2,
-  User,
-  Users
-} from 'lucide-react-native';
-import React, { useCallback, useEffect, useState, useRef } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  RefreshControl,
+  View,
+  Text,
+  StyleSheet,
   SafeAreaView,
   ScrollView,
-  StyleSheet,
-  Text,
   TouchableOpacity,
-  View
+  Image,
+  RefreshControl,
+  ActivityIndicator,
+  Dimensions,
+  Platform,
 } from 'react-native';
+import {
+  Settings,
+  Edit3,
+  MapPin,
+  Calendar,
+  TrendingUp,
+  Award,
+  Users,
+  Bookmark,
+  Heart,
+  MessageSquare,
+  Share2,
+  Instagram,
+  ChevronRight,
+  Plus,
+  Grid3X3,
+  List,
+  Map,
+  BarChart3,
+  Star,
+} from 'lucide-react-native';
+import { DS } from '@/components/design-system/tokens';
+import { AuthGate } from '@/components/AuthGate';
+import { BoardCollageCard } from '@/components/BoardCollageCard';
+import { EditProfileModal } from '@/components/modals/EditProfileModal';
+import SettingsModal from '@/components/modals/SettingsModal';
+import { useAuth } from '@/contexts/AuthContext';
+import { useApp } from '@/contexts/AppContext';
+import { boardService } from '@/services/boardService';
+import { postService } from '@/services/postService';
+import { profileService } from '@/services/profileService';
+import ShareService from '@/services/shareService';
+import { getAvatarUrlWithFallback } from '@/utils/avatarUtils';
+import { useRouter } from 'expo-router';
+import { Board } from '@/types/board';
+import { PostWithUser } from '@/types/post';
 
-type TabType = 'boards' | 'posts' | 'quicksaves' | 'communities';
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const CARD_WIDTH = (SCREEN_WIDTH - DS.spacing.lg * 2 - DS.spacing.md) / 2;
+
+type ViewMode = 'grid' | 'list' | 'map' | 'stats';
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { user, isAuthenticated, profile } = useAuth();
   const { userState } = useApp();
-  const { user, isAuthenticated } = useAuth();
-  const { state: onboardingState } = useOnboarding();
-  const [activeTab, setActiveTab] = useState<TabType>('quicksaves');
+  
+  // State
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const tabScrollRef = useRef<ScrollView>(null);
-  const [followingCount, setFollowingCount] = useState(0);
-  const [followersCount, setFollowersCount] = useState(0);
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  
+  // Data
+  const [boards, setBoards] = useState<Board[]>([]);
+  const [posts, setPosts] = useState<PostWithUser[]>([]);
+  const [stats, setStats] = useState({
+    saves: 0,
+    boards: 0,
+    reviews: 0,
+    followers: 0,
+    following: 0,
+    cities: 0,
+    cuisines: [],
+    topNeighborhoods: [],
+    avgRating: 0,
+  });
 
-  // Data fetching functions
-  const fetchProfile = useCallback(async () => {
-    if (!user?.id) return null;
-    try {
-      return await profileService.getProfile(user.id);
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      return null;
-    }
-  }, [user?.id]);
-
-  const fetchAchievements = useCallback(async () => {
-    if (!user?.id) return [];
-    try {
-      return await achievementService.getUserAchievements(user.id);
-    } catch (error) {
-      console.error('Error fetching achievements:', error);
-      return [];
-    }
-  }, [user?.id]);
-
-  const fetchBoards = useCallback(async () => {
-    if (!user?.id) return [];
-    try {
-      return await boardService.getUserBoards(user.id);
-    } catch (error) {
-      console.error('Error fetching boards:', error);
-      return [];
-    }
-  }, [user?.id]);
-
-  const fetchPosts = useCallback(async () => {
-    if (!user?.id) return [];
-    try {
-      return await postService.getUserPosts(user.id);
-    } catch (error) {
-      console.error('Error fetching posts:', error);
-      return [];
-    }
-  }, [user?.id]);
-
-  const fetchQuickSaves = useCallback(async () => {
-    if (!user?.id) return [];
-    try {
-      const quickSaves = await boardService.getQuickSavesRestaurants(user.id, 50);
-      
-      if (!quickSaves || quickSaves.length === 0) {
-        return [];
-      }
-      
-      // Batch fetch restaurant details for better performance
-      const restaurantIds = quickSaves.map(save => save.restaurant_id);
-      const uniqueRestaurantIds = [...new Set(restaurantIds)];
-      
-      // Fetch all restaurants in parallel with error handling for individual failures
-      const restaurants = await Promise.allSettled(
-        uniqueRestaurantIds.map(id => restaurantService.getRestaurantById(id))
-      );
-      
-      // Create a map for quick lookup, only including successful fetches
-      const restaurantMap = new Map();
-      restaurants.forEach((result, index) => {
-        if (result.status === 'fulfilled' && result.value) {
-          restaurantMap.set(uniqueRestaurantIds[index], result.value);
-        }
-      });
-      
-      // Map restaurants to saves
-      const savesWithRestaurants = quickSaves.map(save => ({
-        ...save,
-        restaurant: restaurantMap.get(save.restaurant_id) || undefined
-      }));
-      
-      return savesWithRestaurants.filter(save => save.restaurant);
-    } catch (error) {
-      console.error('Error fetching your saves:', error);
-      return [];
-    }
-  }, [user?.id]);
-
-  const fetchCommunities = useCallback(async () => {
-    if (!user?.id) return { joined: [], created: [] };
-    try {
-      return await communityService.getUserCommunities(user.id);
-    } catch (error) {
-      console.error('Error fetching communities:', error);
-      return { joined: [], created: [] };
-    }
-  }, [user?.id]);
-
-  const fetchCommunityStats = useCallback(async () => {
-    if (!user?.id) return { joined_count: 0, created_count: 0, admin_count: 0, moderator_count: 0 };
-    try {
-      return await communityService.getUserCommunityStats(user.id);
-    } catch (error) {
-      console.error('Error fetching community stats:', error);
-      return { joined_count: 0, created_count: 0, admin_count: 0, moderator_count: 0 };
-    }
-  }, [user?.id]);
-
-  // Use smooth data fetching
-  const { data: profile, loading: loadingProfile } = useSmoothDataFetch(
-    fetchProfile, 
-    [user?.id], 
-    { minLoadingTime: 300, fetchOnFocus: true }
-  );
-
-  const { data: achievements } = useSmoothDataFetch(
-    fetchAchievements, 
-    [user?.id], 
-    { minLoadingTime: 300, fetchOnFocus: true }
-  );
-
-  const { 
-    data: boards, 
-    loading: loadingBoards,
-    refresh: refreshBoards 
-  } = useSmoothDataFetch(
-    fetchBoards, 
-    [user?.id], 
-    { 
-      minLoadingTime: 300, 
-      fetchOnFocus: true,
-      cacheDuration: 60000 
-    }
-  );
-
-  const { 
-    data: posts, 
-    loading: loadingPosts,
-    refresh: refreshPosts 
-  } = useSmoothDataFetch(
-    fetchPosts, 
-    [user?.id], 
-    { 
-      minLoadingTime: 300, 
-      fetchOnFocus: true,
-      cacheDuration: 60000 
-    }
-  );
-
-  const { 
-    data: quickSaves, 
-    loading: loadingQuickSaves,
-    refreshing: refreshingQuickSaves,
-    refresh: refreshQuickSaves 
-  } = useSmoothDataFetch(
-    fetchQuickSaves, 
-    [user?.id], 
-    { 
-      minLoadingTime: 300, 
-      fetchOnFocus: true,
-      cacheDuration: 30000 
-    }
-  );
-
-  const { 
-    data: communities, 
-    loading: loadingCommunities,
-    refreshing: refreshingCommunities,
-    refresh: refreshCommunities 
-  } = useSmoothDataFetch(
-    fetchCommunities, 
-    [user?.id], 
-    { 
-      minLoadingTime: 300, 
-      fetchOnFocus: true,
-      cacheDuration: 60000 
-    }
-  );
-
-  const { 
-    data: communityStats, 
-    loading: loadingCommunityStats,
-    refresh: refreshCommunityStats 
-  } = useSmoothDataFetch(
-    fetchCommunityStats, 
-    [user?.id], 
-    { 
-      minLoadingTime: 300, 
-      fetchOnFocus: true,
-      cacheDuration: 60000 
-    }
-  );
-
-  // Ensure data is always an array to prevent null errors
-  const safeAchievements = achievements || [];
-  const safeBoards = boards || [];
-  const safePosts = posts || [];
-  const safeQuickSaves = quickSaves || [];
-  const safeCommunities = communities || { joined: [], created: [] };
-  const safeCommunityStats = communityStats || { joined_count: 0, created_count: 0, admin_count: 0, moderator_count: 0 };
-
-  const persona = profile?.persona ? personas[profile.persona as PersonaType] : 
-                 (onboardingState.persona ? personas[onboardingState.persona] : null);
-
-  // Subscribe to real-time updates for following/followers count
-  useEffect(() => {
+  // Fetch profile data
+  const fetchProfileData = useCallback(async () => {
     if (!user?.id) return;
 
-    // Set initial counts
-    if (profile) {
-      setFollowingCount(profile.following_count || 0);
-      setFollowersCount(profile.followers_count || 0);
-    }
-
-    // Subscribe to user stats updates
-    const channel = supabase
-      .channel(`user-stats-${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'users',
-          filter: `id=eq.${user.id}`
-        },
-        (payload) => {
-          const newData = payload.new;
-          setFollowersCount(newData.followers_count || 0);
-          setFollowingCount(newData.following_count || 0);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user?.id, profile]);
-
-  // Refresh data when tab changes
-  useEffect(() => {
-    if (user?.id && !loadingProfile) {
-      // Only refresh if not already loading
-      if (activeTab === 'quicksaves' && !loadingQuickSaves) {
-        refreshQuickSaves();
-      } else if (activeTab === 'posts' && !loadingPosts) {
-        refreshPosts();
-      } else if (activeTab === 'boards' && !loadingBoards) {
-        refreshBoards();
-      } else if (activeTab === 'communities' && !loadingCommunities) {
-        refreshCommunities();
-        refreshCommunityStats();
-      }
-    }
-  }, [activeTab, user?.id, loadingProfile]);
-
-  const handleProfileSave = (updatedProfile: Profile) => {
-    // Profile will be automatically refreshed by the hook
-    setShowEditModal(false);
-  };
-
-  const handleShareProfile = async () => {
-    if (!profile) return;
-    
     try {
-      const result = await ShareService.share({
-        type: 'profile',
-        id: profile.id,
-        username: profile.username || profile.email?.split('@')[0],
-        title: profile.name || profile.username || 'Troodie User',
-        description: profile.bio || `Follow for great restaurant recommendations!`
-      });
+      setLoading(true);
+
+      const [userBoards, userPosts, userProfile] = await Promise.all([
+        boardService.getUserBoards(user.id),
+        postService.getUserPosts(user.id),
+        profileService.getProfile(user.id)
+      ]);
+
+      setBoards(userBoards);
+      setPosts(userPosts);
+
+      // Calculate real stats from data
+      const totalSaves = userBoards.reduce((sum, board) => sum + (board.restaurant_count || 0), 0);
+      const reviews = userPosts.filter(p => p.type === 'review');
       
-      if (result.success) {
-        ToastService.showSuccess('Profile shared successfully');
-      }
+      // Extract unique cuisines from saved restaurants
+      const cuisineSet = new Set<string>();
+      userBoards.forEach(board => {
+        board.restaurants?.forEach(item => {
+          item.restaurant?.cuisine_types?.forEach(cuisine => cuisineSet.add(cuisine));
+        });
+      });
+
+      // Extract neighborhoods
+      const neighborhoodCount: Record<string, number> = {};
+      userBoards.forEach(board => {
+        board.restaurants?.forEach(item => {
+          const neighborhood = item.restaurant?.neighborhood;
+          if (neighborhood) {
+            neighborhoodCount[neighborhood] = (neighborhoodCount[neighborhood] || 0) + 1;
+          }
+        });
+      });
+
+      const topNeighborhoods = Object.entries(neighborhoodCount)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 3)
+        .map(([name]) => name);
+
+      // Calculate average rating from reviews
+      const avgRating = reviews.length > 0
+        ? reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length
+        : 0;
+
+      setStats({
+        saves: totalSaves,
+        boards: userBoards.length,
+        reviews: reviews.length,
+        followers: userProfile?.followers_count || 0,
+        following: userProfile?.following_count || 0,
+        cities: userState.citiesVisited || 1,
+        cuisines: Array.from(cuisineSet).slice(0, 5),
+        topNeighborhoods,
+        avgRating,
+      });
+
     } catch (error) {
-      console.error('Error sharing profile:', error);
-      ToastService.showError('Failed to share profile');
+      console.error('Error fetching profile data:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, [user?.id, userState.citiesVisited]);
 
-  const handlePostPress = (postId: string) => {
-    router.push({
-      pathname: '/posts/[id]',
-      params: { id: postId }
-    });
-  };
-
-  const handleEditPost = (postId: string) => {
-    router.push({
-      pathname: '/posts/edit/[id]',
-      params: { id: postId }
-    });
-  };
-
-  const handleLike = useCallback((postId: string, liked: boolean) => {
-    // Like actions are handled by the PostCard component
-  }, []);
-
-  const handleComment = useCallback((postId: string) => {
-    router.push({
-      pathname: '/posts/[id]',
-      params: { id: postId }
-    });
-  }, [router]);
-
-  const handleSave = useCallback((postId: string) => {
-    // Save actions are handled by the PostCard component
-  }, []);
-
-  // User data with real profile
-  const userData = {
-    name: profile?.name || profile?.email?.split('@')[0] || 'Troodie User',
-    username: profile?.username ? `@${profile.username}` : '@user',
-    avatar: getAvatarUrl(profile),
-    bio: profile?.bio || '',
-    stats: {
-      followers: followersCount,
-      following: followingCount,
-      posts: safePosts.length // Use actual posts count instead of reviews_count
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      fetchProfileData();
+    } else {
+      setLoading(false);
     }
+  }, [isAuthenticated, user?.id, fetchProfileData]);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchProfileData();
   };
 
-  // Profile data prepared
+  const handleShare = () => {
+    ShareService.shareProfile(user?.id || '', profile?.username || '');
+  };
 
-  // Transform safeAchievements for display
-  const displayAchievements = safeAchievements.slice(0, 3).map((achievement, index) => ({
-    id: index + 1,
-    name: achievement.title || achievement.name,
-    icon: Award
-  }));
-
-  const renderHeader = () => (
-    <View style={styles.header}>
-      <TouchableOpacity 
-        style={styles.headerButton} 
-        onPress={() => router.push('/find-friends')}
-      >
-        <Users size={24} color={designTokens.colors.textDark} />
-      </TouchableOpacity>
-      <View style={styles.headerSpacer} />
-      <MenuButton 
-        onPress={() => setShowSettingsModal(true)}
-        iconName="settings-outline"
-        size={24}
-        color={designTokens.colors.textDark}
-      />
+  // Render stat card
+  const StatCard = ({ icon: Icon, value, label, color = DS.colors.textDark }: any) => (
+    <View style={styles.statCard}>
+      <Icon size={20} color={color} />
+      <Text style={[styles.statValue, { color }]}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
 
-  const renderProfileInfo = () => (
-    <View style={styles.profileInfo}>
-      <View style={styles.profileHeader}>
-        <TouchableOpacity style={styles.avatarContainer} onPress={() => setShowEditModal(true)}>
-          <Image 
-            source={{ uri: getAvatarUrlWithFallback(userData.avatar) }} 
-            style={styles.avatar}
-            resizeMode="cover"
+  // Render board card
+  const renderBoardCard = (board: Board) => (
+    <BoardCollageCard
+      key={board.id}
+      board={board}
+      onPress={() => router.push(`/boards/${board.id}`)}
+    />
+  );
+
+  // Render list view item
+  const renderListItem = (board: Board) => (
+    <TouchableOpacity
+      key={board.id}
+      style={styles.listItem}
+      onPress={() => router.push(`/boards/${board.id}`)}
+      activeOpacity={0.8}
+    >
+      <View style={styles.listItemLeft}>
+        {board.restaurants && board.restaurants[0]?.restaurant?.main_image ? (
+          <Image
+            source={{ uri: board.restaurants[0].restaurant.main_image }}
+            style={styles.listItemImage}
           />
-          <View style={styles.editAvatarButton}>
-            <Camera size={10} color={designTokens.colors.white} />
+        ) : (
+          <View style={styles.listItemImagePlaceholder}>
+            <Bookmark size={20} color={DS.colors.textLight} />
           </View>
-        </TouchableOpacity>
-
-        <View style={styles.profileDetails}>
-          <View style={styles.nameRow}>
-            <Text style={styles.name}>{userData.username}</Text>
-            {persona && (
-              <View style={styles.personaBadge}>
-                <Text style={styles.personaName}>{persona.name}</Text>
-              </View>
-            )}
-          </View>
-          
-          {userData.bio ? (
-            <Text style={styles.bio} numberOfLines={2}>{userData.bio}</Text>
-          ) : (
-            <TouchableOpacity onPress={() => setShowEditModal(true)}>
-              <Text style={styles.bioPlaceholder}>Add a bio...</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Achievement Badges */}
-          {displayAchievements.length > 0 && (
-            <View style={styles.achievementsContainer}>
-              {displayAchievements.map((achievement) => (
-                <View key={achievement.id} style={styles.achievementBadge}>
-                  <Award size={8} color="#B45309" />
-                  <Text style={styles.achievementText}>{achievement.name}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
+        )}
       </View>
-
-      <View style={styles.stats}>
-        <TouchableOpacity style={styles.statItem} onPress={() => router.push(`/user/${user?.id}/followers`)}>
-          <Text style={styles.statValue}>{userData.stats.followers}</Text>
-          <Text style={styles.statLabel}>Followers</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.statItem} onPress={() => router.push(`/user/${user?.id}/following`)}>
-          <Text style={styles.statValue}>{userData.stats.following}</Text>
-          <Text style={styles.statLabel}>Following</Text>
-        </TouchableOpacity>
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{safeBoards.length}</Text>
-          <Text style={styles.statLabel}>Boards</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{userData.stats.posts}</Text>
-          <Text style={styles.statLabel}>Posts</Text>
-        </View>
+      <View style={styles.listItemContent}>
+        <Text style={styles.listItemName}>{board.name}</Text>
+        <Text style={styles.listItemDetails}>
+          {board.restaurant_count || 0} restaurants • Updated {new Date(board.updated_at).toLocaleDateString()}
+        </Text>
       </View>
-
-      <View style={styles.actionButtons}>
-        <TouchableOpacity style={styles.editProfileButton} onPress={() => setShowEditModal(true)} testID="edit-profile-button">
-          <PenLine size={10} color={designTokens.colors.primaryOrange} />
-          <Text style={styles.editProfileText}>Edit Profile</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.shareButton} onPress={handleShareProfile}>
-          <Share2 size={10} color={designTokens.colors.textMedium} />
-          <Text style={styles.shareButtonText}>Share</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+      <ChevronRight size={20} color={DS.colors.textGray} />
+    </TouchableOpacity>
   );
 
-  const renderTabs = () => (
-    <View style={styles.tabsContainer}>
-      <ScrollView
-        ref={tabScrollRef}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.tabs}
-      >
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'quicksaves' && styles.activeTab]}
-          onPress={() => setActiveTab('quicksaves')}
-        >
-          <Bookmark size={14} color={activeTab === 'quicksaves' ? designTokens.colors.textDark : designTokens.colors.textMedium} />
-          <Text style={[styles.tabText, activeTab === 'quicksaves' && styles.activeTabText]}>
-            Saves ({safeQuickSaves.length})
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'boards' && styles.activeTab]}
-          onPress={() => setActiveTab('boards')}
-        >
-          <Grid3X3 size={14} color={activeTab === 'boards' ? designTokens.colors.textDark : designTokens.colors.textMedium} />
-          <Text style={[styles.tabText, activeTab === 'boards' && styles.activeTabText]}>
-            Boards ({safeBoards.length})
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'posts' && styles.activeTab]}
-          onPress={() => setActiveTab('posts')}
-        >
-          <MessageSquare size={14} color={activeTab === 'posts' ? designTokens.colors.textDark : designTokens.colors.textMedium} />
-          <Text style={[styles.tabText, activeTab === 'posts' && styles.activeTabText]}>
-            Posts ({safePosts.length})
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'communities' && styles.activeTab]}
-          onPress={() => setActiveTab('communities')}
-        >
-          <Users size={14} color={activeTab === 'communities' ? designTokens.colors.textDark : designTokens.colors.textMedium} />
-          <Text style={[styles.tabText, activeTab === 'communities' && styles.activeTabText]}>
-            Communities ({safeCommunityStats.joined_count})
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </View>
-  );
-
-
-  const renderQuickSavesTab = () => (
-    <View style={styles.tabContent}>
-      {loadingQuickSaves ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color={designTokens.colors.primaryOrange} />
-        </View>
-      ) : safeQuickSaves.length > 0 ? (
-        <FlatList
-          data={safeQuickSaves}
-          renderItem={({ item }: { item: BoardRestaurant & { restaurant?: RestaurantInfo } }) => {
-            if (!item.restaurant) return null;
-            
-            return (
-              <View style={styles.quickSaveItem}>
-                <RestaurantCard 
-                  restaurant={item.restaurant} 
-                  onPress={() => router.push(`/restaurant/${item.restaurant_id}`)}
-                />
-              </View>
-            );
-          }}
-          keyExtractor={(item) => item.id}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.quickSavesList}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshingQuickSaves}
-              onRefresh={() => refreshQuickSaves()}
-              tintColor={designTokens.colors.primaryOrange}
-            />
-          }
-        />
-      ) : (
-        <View style={styles.emptyState}>
-          <View style={styles.emptyIcon}>
-            <Grid3X3 size={32} color="#DDD" />
-          </View>
-          <Text style={styles.emptyTitle}>No Saves Yet</Text>
-          <Text style={styles.emptyDescription}>
-            Tap the save button on any restaurant to add it here
-          </Text>
-          <TouchableOpacity 
-            style={styles.emptyCTA}
-            onPress={() => router.push('/explore')}
-          >
-            <Text style={styles.emptyCTAText}>Explore Restaurants</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
-  );
-
-  const renderBoardsTab = () => (
-    <View style={styles.tabContent}>
-      {loadingBoards ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color={designTokens.colors.primaryOrange} />
-        </View>
-      ) : safeBoards.length > 0 ? (
-        <FlatList
-          data={safeBoards}
-          renderItem={({ item }: { item: Board }) => (
-            <BoardCard 
-              key={item.id} 
-              board={item} 
-              onPress={() => router.push(`/boards/${item.id}`)}
-            />
-          )}
-          keyExtractor={(item: Board) => item.id}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.boardsList}
-          ListFooterComponent={() => (
-            <TouchableOpacity 
-              style={styles.addBoardButton} 
-              onPress={() => router.push('/add/create-board')}
-            >
-              <Plus size={20} color={designTokens.colors.primaryOrange} />
-              <Text style={styles.addBoardText}>Create New Board</Text>
-            </TouchableOpacity>
-          )}
-        />
-      ) : (
-        <View style={styles.emptyState}>
-          <View style={styles.emptyIcon}>
-            <Grid3X3 size={32} color="#DDD" />
-          </View>
-          <Text style={styles.emptyTitle}>Create Your First Board</Text>
-          <Text style={styles.emptyDescription}>
-            Organize your saved restaurants into collections
-          </Text>
-          <TouchableOpacity 
-            style={styles.emptyCTA}
-            onPress={() => router.push('/add/create-board')}
-          >
-            <Plus size={20} color={designTokens.colors.white} />
-            <Text style={styles.emptyCTAText}>Create Board</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
-  );
-
-  const renderPostsTab = () => {
-    if (loadingPosts) {
-      return (
-        <View style={styles.tabContent}>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={designTokens.colors.primaryOrange} />
-            <Text style={styles.loadingText}>Loading posts...</Text>
-          </View>
-        </View>
-      );
-    }
-
-    if (safePosts.length === 0) {
-      return (
-        <View style={styles.tabContent}>
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIcon}>
-              <MessageSquare size={32} color="#DDD" />
-            </View>
-            <Text style={styles.emptyTitle}>Share Your First Experience</Text>
-            <Text style={styles.emptyDescription}>
-              Post about your restaurant visits and build your foodie reputation
-            </Text>
-            <TouchableOpacity 
-              style={styles.emptyCTA}
-              onPress={() => router.push('/add/create-post')}
-            >
-              <Plus size={20} color={designTokens.colors.white} />
-              <Text style={styles.emptyCTAText}>Create Post</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.tabContent}>
-        <FlatList
-          data={safePosts}
-          renderItem={({ item }: { item: PostWithUser }) => {
-            
-            return (
-              <PostCard
-                post={item}
-                onPress={() => handlePostPress(item.id)}
-                onLike={handleLike}
-                onComment={handleComment}
-                onSave={handleSave}
-                showActions={true}
-              />
-            );
-          }}
-          keyExtractor={(item: PostWithUser) => item.id}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.postsList}
-          refreshControl={
-            <RefreshControl
-              refreshing={loadingPosts}
-              onRefresh={refreshPosts}
-              tintColor={designTokens.colors.primaryOrange}
-            />
-          }
-        />
-      </View>
-    );
-  };
-
-  // Show AuthGate for non-authenticated users
   if (!isAuthenticated) {
     return (
       <AuthGate 
         screenName="your profile"
-        customTitle="Create Your Food Journey"
-        customMessage="Build your personal food profile, save your favorite restaurants, share reviews, and connect with fellow food enthusiasts."
-      >
-        {/* This will never render since AuthGate handles non-authenticated users */}
-        <View />
-      </AuthGate>
+        message="Sign in to view your profile and saved restaurants"
+      />
     );
   }
 
-  // Only show loading state for authenticated users
-  if (loadingProfile) {
+  if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={designTokens.colors.primaryOrange} />
+          <ActivityIndicator size="large" color={DS.colors.primaryOrange} />
         </View>
       </SafeAreaView>
     );
@@ -736,481 +242,599 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-        {/* Header and Profile Info - Fixed Content */}
-        <View style={styles.fixedContent}>
-          {renderHeader()}
-          {renderProfileInfo()}
-          {renderTabs()}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => setShowEditModal(true)}>
+            <Edit3 size={24} color={DS.colors.textDark} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Profile</Text>
+          <TouchableOpacity onPress={() => setShowSettingsModal(true)}>
+            <Settings size={24} color={DS.colors.textDark} />
+          </TouchableOpacity>
         </View>
 
-        {/* Tab Content - Scrollable */}
-        <View style={styles.tabContentContainer}>
-          {activeTab === 'quicksaves' && renderQuickSavesTab()}
-          {activeTab === 'boards' && renderBoardsTab()}
-          {activeTab === 'posts' && renderPostsTab()}
-          {activeTab === 'communities' && (
-            <CommunityTab
-              userId={user?.id || ''}
-              communities={safeCommunities}
-              stats={safeCommunityStats}
-              loading={loadingCommunities}
-              refreshing={refreshingCommunities}
-              onRefresh={() => {
-                refreshCommunities();
-                refreshCommunityStats();
-              }}
+        {/* Profile Info */}
+        <View style={styles.profileSection}>
+          <TouchableOpacity onPress={() => setShowEditModal(true)}>
+            <Image
+              source={{ uri: getAvatarUrlWithFallback(profile?.avatar_url) }}
+              style={styles.avatar}
             />
+          </TouchableOpacity>
+          
+          <Text style={styles.displayName}>
+            {profile?.display_name || profile?.username || 'Foodie'}
+          </Text>
+          <Text style={styles.username}>@{profile?.username || 'username'}</Text>
+          
+          {profile?.bio && (
+            <Text style={styles.bio} numberOfLines={2}>
+              {profile.bio}
+            </Text>
+          )}
+
+          <View style={styles.profileMeta}>
+            {profile?.city && (
+              <View style={styles.metaItem}>
+                <MapPin size={14} color={DS.colors.textGray} />
+                <Text style={styles.metaText}>{profile.city}</Text>
+              </View>
+            )}
+            <View style={styles.metaItem}>
+              <Calendar size={14} color={DS.colors.textGray} />
+              <Text style={styles.metaText}>
+                Joined {new Date(profile?.created_at || Date.now()).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+              </Text>
+            </View>
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity style={styles.primaryButton} onPress={handleShare}>
+              <Share2 size={18} color={DS.colors.textWhite} />
+              <Text style={styles.primaryButtonText}>Share Profile</Text>
+            </TouchableOpacity>
+            {profile?.instagram_username && (
+              <TouchableOpacity style={styles.secondaryButton}>
+                <Instagram size={18} color={DS.colors.textDark} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {/* Quick Stats */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.statsContainer}
+          contentContainerStyle={styles.statsContent}
+        >
+          <StatCard
+            icon={Bookmark}
+            value={stats.saves}
+            label="Saves"
+            color={DS.colors.primaryOrange}
+          />
+          <StatCard
+            icon={Grid3X3}
+            value={stats.boards}
+            label="Boards"
+          />
+          <StatCard
+            icon={Star}
+            value={stats.reviews}
+            label="Reviews"
+          />
+          <StatCard
+            icon={Users}
+            value={stats.followers}
+            label="Followers"
+          />
+          <StatCard
+            icon={MapPin}
+            value={stats.cities}
+            label="Cities"
+          />
+        </ScrollView>
+
+        {/* Taste Profile */}
+        {(stats.cuisines.length > 0 || stats.topNeighborhoods.length > 0) && (
+          <View style={styles.tasteProfile}>
+            <Text style={styles.sectionTitle}>Taste Profile</Text>
+            
+            {stats.cuisines.length > 0 && (
+              <View style={styles.tasteSection}>
+                <Text style={styles.tasteSectionTitle}>Favorite Cuisines</Text>
+                <View style={styles.tagContainer}>
+                  {stats.cuisines.map((cuisine, index) => (
+                    <View key={index} style={styles.tag}>
+                      <Text style={styles.tagText}>{cuisine}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {stats.topNeighborhoods.length > 0 && (
+              <View style={styles.tasteSection}>
+                <Text style={styles.tasteSectionTitle}>Top Neighborhoods</Text>
+                <View style={styles.tagContainer}>
+                  {stats.topNeighborhoods.map((neighborhood, index) => (
+                    <View key={index} style={[styles.tag, styles.tagNeighborhood]}>
+                      <MapPin size={12} color={DS.colors.primaryOrange} />
+                      <Text style={[styles.tagText, { color: DS.colors.primaryOrange }]}>
+                        {neighborhood}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Boards Section */}
+        <View style={styles.boardsSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>My Boards</Text>
+            <View style={styles.viewToggle}>
+              <TouchableOpacity
+                style={[styles.viewToggleButton, viewMode === 'grid' && styles.viewToggleActive]}
+                onPress={() => setViewMode('grid')}
+              >
+                <Grid3X3 size={16} color={viewMode === 'grid' ? DS.colors.primaryOrange : DS.colors.textGray} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.viewToggleButton, viewMode === 'list' && styles.viewToggleActive]}
+                onPress={() => setViewMode('list')}
+              >
+                <List size={16} color={viewMode === 'list' ? DS.colors.primaryOrange : DS.colors.textGray} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {boards.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Bookmark size={48} color={DS.colors.textLight} />
+              <Text style={styles.emptyTitle}>No boards yet</Text>
+              <Text style={styles.emptyText}>
+                Start saving restaurants to organize them into boards
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyButton}
+                onPress={() => router.push('/add/create-board')}
+              >
+                <Plus size={18} color={DS.colors.textWhite} />
+                <Text style={styles.emptyButtonText}>Create First Board</Text>
+              </TouchableOpacity>
+            </View>
+          ) : viewMode === 'grid' ? (
+            <View style={styles.boardsGrid}>
+              {boards.map(renderBoardCard)}
+              <TouchableOpacity
+                style={[styles.boardCard, styles.addBoardCard]}
+                onPress={() => router.push('/add/create-board')}
+              >
+                <View style={styles.addBoardContent}>
+                  <Plus size={24} color={DS.colors.textGray} />
+                  <Text style={styles.addBoardText}>New Board</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.listContainer}>
+              {boards.map(renderListItem)}
+            </View>
           )}
         </View>
 
-        <SettingsModal 
-          visible={showSettingsModal} 
-          onClose={() => setShowSettingsModal(false)} 
-        />
-        
-        <EditProfileModal
-          visible={showEditModal}
-          onClose={() => setShowEditModal(false)}
-          onSave={handleProfileSave}
-          currentProfile={profile}
-        />
-      </SafeAreaView>
+        {/* Recent Activity */}
+        {posts.length > 0 && (
+          <View style={styles.activitySection}>
+            <Text style={styles.sectionTitle}>Recent Activity</Text>
+            <View style={styles.activityList}>
+              {posts.slice(0, 5).map((post) => (
+                <TouchableOpacity
+                  key={post.id}
+                  style={styles.activityItem}
+                  onPress={() => router.push(`/posts/${post.id}`)}
+                >
+                  <View style={styles.activityIcon}>
+                    {post.type === 'review' ? (
+                      <Star size={16} color={DS.colors.primaryOrange} />
+                    ) : (
+                      <MessageSquare size={16} color={DS.colors.textGray} />
+                    )}
+                  </View>
+                  <View style={styles.activityContent}>
+                    <Text style={styles.activityText} numberOfLines={1}>
+                      {post.type === 'review' ? 'Reviewed' : 'Posted about'} {post.restaurant_name}
+                    </Text>
+                    <Text style={styles.activityDate}>
+                      {new Date(post.created_at).toLocaleDateString()}
+                    </Text>
+                  </View>
+                  <ChevronRight size={16} color={DS.colors.textGray} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Modals */}
+      {showSettingsModal && (
+        <SettingsModal visible={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
+      )}
+      {showEditModal && (
+        <EditProfileModal visible={showEditModal} onClose={() => setShowEditModal(false)} />
+      )}
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: designTokens.colors.white,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: compactDesign.header.paddingHorizontal,
-    paddingVertical: compactDesign.header.paddingVertical,
-  },
-  headerButton: {
-    width: compactDesign.button.height,
-    height: compactDesign.button.height,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerSpacer: {
-    flex: 1,
-  },
-  profileInfo: {
-    paddingHorizontal: compactDesign.content.padding,
-    paddingBottom: compactDesign.content.paddingCompact,
-  },
-  profileHeader: {
-    flexDirection: 'row',
-    marginBottom: compactDesign.content.gap,
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginRight: 12,
-  },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 2,
-    borderColor: designTokens.colors.primaryOrange + '33',
-  },
-  editAvatarButton: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    backgroundColor: designTokens.colors.primaryOrange,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: designTokens.colors.white,
-  },
-  profileDetails: {
-    flex: 1,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-  },
-  name: {
-    ...designTokens.typography.cardTitle,
-    fontFamily: 'Poppins_700Bold',
-    color: designTokens.colors.textDark,
-  },
-  username: {
-    ...designTokens.typography.bodyRegular,
-    color: designTokens.colors.textMedium,
-    marginBottom: compactDesign.content.gap,
-  },
-  personaBadge: {
-    backgroundColor: designTokens.colors.primaryOrange + '1A',
-    borderWidth: 1,
-    borderColor: designTokens.colors.primaryOrange + '33',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: designTokens.borderRadius.full,
-  },
-  personaName: {
-    fontSize: 10,
-    fontFamily: 'Inter_600SemiBold',
-    color: designTokens.colors.primaryOrange,
-  },
-  bio: {
-    ...designTokens.typography.smallText,
-    color: designTokens.colors.textDark,
-    marginBottom: compactDesign.card.gap,
-  },
-  achievementsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
-    marginTop: 4,
-  },
-  achievementBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 10,
-    gap: 2,
-  },
-  achievementText: {
-    fontSize: 9,
-    fontFamily: 'Inter_600SemiBold',
-    color: '#B45309',
-  },
-  stats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-    marginBottom: compactDesign.content.gap,
-    paddingVertical: compactDesign.content.gap,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: designTokens.colors.borderLight,
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 16,
-    fontFamily: 'Poppins_700Bold',
-    color: designTokens.colors.textDark,
-  },
-  statLabel: {
-    fontSize: 10,
-    fontFamily: 'Inter_400Regular',
-    color: designTokens.colors.textMedium,
-  },
-  creatorCard: {
-    backgroundColor: '#F3E8FF',
-    borderWidth: 1,
-    borderColor: '#C084FC',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 20,
-    ...designTokens.shadows.card,
-  },
-  creatorHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  creatorTitle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  creatorTitleText: {
-    fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
-    color: '#7C3AED',
-  },
-  creatorButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    backgroundColor: '#8B5CF6',
-    borderRadius: 6,
-  },
-  creatorButtonText: {
-    fontSize: 10,
-    fontFamily: 'Inter_600SemiBold',
-    color: designTokens.colors.white,
-  },
-  creatorStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  creatorStatItem: {
-    alignItems: 'center',
-  },
-  creatorStatValue: {
-    fontSize: 14,
-    fontFamily: 'Poppins_700Bold',
-    color: '#7C3AED',
-  },
-  creatorStatLabel: {
-    fontSize: 10,
-    fontFamily: 'Inter_400Regular',
-    color: '#A855F7',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  editProfileButton: {
-    flex: 1,
-    backgroundColor: designTokens.colors.white,
-    borderWidth: 1,
-    borderColor: designTokens.colors.primaryOrange,
-    paddingVertical: 8,
-    borderRadius: 6,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 4,
-  },
-  editProfileText: {
-    fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
-    color: designTokens.colors.primaryOrange,
-  },
-  shareButton: {
-    flex: 1,
-    backgroundColor: designTokens.colors.backgroundLight,
-    borderWidth: 1,
-    borderColor: designTokens.colors.borderLight,
-    paddingVertical: 8,
-    borderRadius: 6,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 4,
-  },
-  shareButtonText: {
-    fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
-    color: designTokens.colors.textDark,
-  },
-  tabsContainer: {
-    marginHorizontal: 20,
-    marginBottom: 12,
-  },
-  tabs: {
-    flexDirection: 'row',
-    backgroundColor: designTokens.colors.backgroundLight,
-    borderRadius: designTokens.borderRadius.sm,
-    padding: 2,
-    gap: 2,
-  },
-  tab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: designTokens.borderRadius.sm - 2,
-    gap: 6,
-    minWidth: 90,
-  },
-  activeTab: {
-    backgroundColor: designTokens.colors.white,
-    borderWidth: 1,
-    borderColor: designTokens.colors.primaryOrange + '33',
-    ...designTokens.shadows.card,
-  },
-  tabText: {
-    fontSize: 13,
-    fontFamily: 'Inter_600SemiBold',
-    color: designTokens.colors.textMedium,
-  },
-  activeTabText: {
-    color: designTokens.colors.textDark,
-  },
-  tabContent: {
-    minHeight: 300,
-  },
-  savesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    gap: 8,
-  },
-  saveItem: {
-    width: '47%',
-    position: 'relative',
-  },
-  saveImage: {
-    width: '100%',
-    height: 80,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  cuisineBadge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  cuisineBadgeText: {
-    fontSize: 10,
-    fontFamily: 'Inter_600SemiBold',
-    color: designTokens.colors.textDark,
-  },
-  saveInfo: {
-    paddingHorizontal: 4,
-  },
-  saveTitle: {
-    fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
-    color: designTokens.colors.textDark,
-    marginBottom: 2,
-  },
-  saveLocation: {
-    fontSize: 10,
-    fontFamily: 'Inter_400Regular',
-    color: designTokens.colors.textMedium,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 40,
-  },
-  emptyIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: designTokens.colors.backgroundLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontFamily: 'Poppins_600SemiBold',
-    color: designTokens.colors.textDark,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptyDescription: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    color: designTokens.colors.textMedium,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  emptyCTA: {
-    backgroundColor: designTokens.colors.primaryOrange,
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  emptyCTAText: {
-    fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
-    color: designTokens.colors.white,
-  },
-  bottomPadding: {
-    height: 100,
-  },
-  avatarPlaceholder: {
-    backgroundColor: designTokens.colors.backgroundLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bioPlaceholder: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    color: designTokens.colors.textMedium,
-    fontStyle: 'italic',
-    marginBottom: 8,
+    backgroundColor: DS.colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  boardsList: {
-    paddingHorizontal: 20,
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: DS.spacing.lg,
+    paddingVertical: DS.spacing.md,
+    backgroundColor: DS.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: DS.colors.borderLight,
   },
-  quickSavesList: {
-    paddingHorizontal: 20,
+  headerTitle: {
+    ...DS.typography.h1,
+    color: DS.colors.textDark,
   },
-  quickSaveItem: {
-    // RestaurantCard now handles its own margin
+  profileSection: {
+    alignItems: 'center',
+    paddingVertical: DS.spacing.xl,
+    paddingHorizontal: DS.spacing.lg,
+    backgroundColor: DS.colors.surface,
   },
-  addBoardButton: {
+  avatar: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    marginBottom: DS.spacing.md,
+    borderWidth: 3,
+    borderColor: DS.colors.primaryOrange,
+  },
+  displayName: {
+    ...DS.typography.h2,
+    color: DS.colors.textDark,
+    marginBottom: DS.spacing.xs,
+  },
+  username: {
+    ...DS.typography.body,
+    color: DS.colors.textGray,
+    marginBottom: DS.spacing.sm,
+  },
+  bio: {
+    ...DS.typography.body,
+    color: DS.colors.textDark,
+    textAlign: 'center',
+    marginBottom: DS.spacing.md,
+    paddingHorizontal: DS.spacing.xl,
+  },
+  profileMeta: {
+    flexDirection: 'row',
+    gap: DS.spacing.lg,
+    marginBottom: DS.spacing.lg,
+  },
+  metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: DS.spacing.xs,
+  },
+  metaText: {
+    ...DS.typography.metadata,
+    color: DS.colors.textGray,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: DS.spacing.sm,
+  },
+  primaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DS.spacing.sm,
+    backgroundColor: DS.colors.primaryOrange,
+    paddingHorizontal: DS.spacing.lg,
+    paddingVertical: DS.spacing.sm,
+    borderRadius: DS.borderRadius.full,
+  },
+  primaryButtonText: {
+    ...DS.typography.button,
+    color: DS.colors.textWhite,
+  },
+  secondaryButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: DS.colors.surfaceLight,
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    marginTop: 8,
-    marginBottom: 16,
-    backgroundColor: designTokens.colors.backgroundLight,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: designTokens.colors.primaryOrange + '33',
+    alignItems: 'center',
+  },
+  statsContainer: {
+    backgroundColor: DS.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: DS.colors.borderLight,
+  },
+  statsContent: {
+    paddingHorizontal: DS.spacing.lg,
+    paddingVertical: DS.spacing.md,
+    gap: DS.spacing.md,
+  },
+  statCard: {
+    alignItems: 'center',
+    paddingHorizontal: DS.spacing.md,
+    minWidth: 70,
+  },
+  statValue: {
+    ...DS.typography.h3,
+    color: DS.colors.textDark,
+    marginTop: DS.spacing.xs,
+  },
+  statLabel: {
+    ...DS.typography.caption,
+    color: DS.colors.textGray,
+    marginTop: 2,
+  },
+  tasteProfile: {
+    padding: DS.spacing.lg,
+    backgroundColor: DS.colors.surface,
+    marginTop: DS.spacing.sm,
+  },
+  tasteSection: {
+    marginTop: DS.spacing.md,
+  },
+  tasteSectionTitle: {
+    ...DS.typography.metadata,
+    color: DS.colors.textGray,
+    marginBottom: DS.spacing.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  tagContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: DS.spacing.sm,
+  },
+  tag: {
+    paddingHorizontal: DS.spacing.md,
+    paddingVertical: DS.spacing.xs,
+    backgroundColor: DS.colors.surfaceLight,
+    borderRadius: DS.borderRadius.full,
+  },
+  tagNeighborhood: {
+    backgroundColor: '#FFF4ED',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DS.spacing.xs,
+  },
+  tagText: {
+    ...DS.typography.caption,
+    color: DS.colors.textDark,
+    fontWeight: '500',
+  },
+  boardsSection: {
+    padding: DS.spacing.lg,
+    backgroundColor: DS.colors.surface,
+    marginTop: DS.spacing.sm,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: DS.spacing.md,
+  },
+  sectionTitle: {
+    ...DS.typography.h3,
+    color: DS.colors.textDark,
+  },
+  viewToggle: {
+    flexDirection: 'row',
+    backgroundColor: DS.colors.surfaceLight,
+    borderRadius: DS.borderRadius.md,
+    padding: 2,
+  },
+  viewToggleButton: {
+    padding: DS.spacing.sm,
+    borderRadius: DS.borderRadius.sm,
+  },
+  viewToggleActive: {
+    backgroundColor: DS.colors.surface,
+  },
+  boardsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: DS.spacing.md,
+  },
+  boardCard: {
+    width: CARD_WIDTH,
+  },
+  boardImages: {
+    width: '100%',
+    height: CARD_WIDTH,
+    borderRadius: DS.borderRadius.md,
+    overflow: 'hidden',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  boardImage: {
+    width: '50%',
+    height: '50%',
+  },
+  boardImageSingle: {
+    width: '100%',
+    height: '100%',
+  },
+  boardImageDouble: {
+    width: '50%',
+    height: '100%',
+  },
+  boardImageTripleFirst: {
+    width: '100%',
+    height: '50%',
+  },
+  boardEmptyImage: {
+    width: '100%',
+    height: CARD_WIDTH,
+    borderRadius: DS.borderRadius.md,
+    backgroundColor: DS.colors.surfaceLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  boardInfo: {
+    paddingTop: DS.spacing.sm,
+  },
+  boardName: {
+    ...DS.typography.button,
+    color: DS.colors.textDark,
+  },
+  boardCount: {
+    ...DS.typography.caption,
+    color: DS.colors.textGray,
+  },
+  addBoardCard: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addBoardContent: {
+    width: '100%',
+    height: CARD_WIDTH,
+    borderRadius: DS.borderRadius.md,
+    borderWidth: 2,
+    borderColor: DS.colors.borderLight,
     borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   addBoardText: {
-    fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
-    color: designTokens.colors.primaryOrange,
+    ...DS.typography.button,
+    color: DS.colors.textGray,
+    marginTop: DS.spacing.sm,
   },
-  loadingText: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    color: designTokens.colors.textMedium,
-    marginTop: 8,
+  listContainer: {
+    gap: DS.spacing.xs,
   },
-  postContainer: {
-    marginBottom: 16,
-  },
-  postActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: designTokens.colors.backgroundLight,
-    borderTopWidth: 1,
-    borderTopColor: designTokens.colors.borderLight,
-  },
-  actionButton: {
+  listItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: compactDesign.card.gap,
-    gap: 4,
+    paddingVertical: DS.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: DS.colors.borderLight,
   },
-  actionText: {
-    ...designTokens.typography.smallText,
-    fontFamily: 'Inter_500Medium',
-    color: designTokens.colors.primaryOrange,
+  listItemLeft: {
+    marginRight: DS.spacing.md,
   },
-  postsList: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+  listItemImage: {
+    width: 56,
+    height: 56,
+    borderRadius: DS.borderRadius.md,
   },
-  fixedContent: {
-    flex: 0, // Do not take up space in the main scrollable area
+  listItemImagePlaceholder: {
+    width: 56,
+    height: 56,
+    borderRadius: DS.borderRadius.md,
+    backgroundColor: DS.colors.surfaceLight,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  tabContentContainer: {
-    flex: 1, // Take up available space for the scrollable content
+  listItemContent: {
+    flex: 1,
+  },
+  listItemName: {
+    ...DS.typography.button,
+    color: DS.colors.textDark,
+    marginBottom: DS.spacing.xs,
+  },
+  listItemDetails: {
+    ...DS.typography.metadata,
+    color: DS.colors.textGray,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: DS.spacing.xxxl,
+  },
+  emptyTitle: {
+    ...DS.typography.h3,
+    color: DS.colors.textDark,
+    marginTop: DS.spacing.md,
+  },
+  emptyText: {
+    ...DS.typography.body,
+    color: DS.colors.textGray,
+    textAlign: 'center',
+    marginTop: DS.spacing.sm,
+    marginBottom: DS.spacing.xl,
+  },
+  emptyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DS.spacing.sm,
+    backgroundColor: DS.colors.primaryOrange,
+    paddingHorizontal: DS.spacing.lg,
+    paddingVertical: DS.spacing.md,
+    borderRadius: DS.borderRadius.full,
+  },
+  emptyButtonText: {
+    ...DS.typography.button,
+    color: DS.colors.textWhite,
+  },
+  activitySection: {
+    padding: DS.spacing.lg,
+    backgroundColor: DS.colors.surface,
+    marginTop: DS.spacing.sm,
+    marginBottom: DS.spacing.xl,
+  },
+  activityList: {
+    marginTop: DS.spacing.md,
+  },
+  activityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: DS.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: DS.colors.borderLight,
+  },
+  activityIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: DS.colors.surfaceLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: DS.spacing.md,
+  },
+  activityContent: {
+    flex: 1,
+  },
+  activityText: {
+    ...DS.typography.body,
+    color: DS.colors.textDark,
+    marginBottom: 2,
+  },
+  activityDate: {
+    ...DS.typography.caption,
+    color: DS.colors.textGray,
   },
 });

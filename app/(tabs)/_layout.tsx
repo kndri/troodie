@@ -1,8 +1,9 @@
 import { Tabs } from 'expo-router';
-import { Compass, Heart, Home, Plus, User } from 'lucide-react-native';
-import React from 'react';
-import { Platform, StyleSheet, TouchableOpacity } from 'react-native';
+import { Bookmark, Home, MapPin, MoreHorizontal, Plus } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 
+import { CreateModal } from '@/components/CreateModal';
 import { HapticTab } from '@/components/HapticTab';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { compactDesign, designTokens } from '@/constants/designTokens';
@@ -11,17 +12,10 @@ import { useRouter } from 'expo-router';
 
 export default function TabLayout() {
   const router = useRouter();
-  const FloatingAddButton = () => (
-    <TouchableOpacity
-      style={styles.floatingButton}
-      activeOpacity={0.8}
-      onPress={() => router.push('/add')}
-    >
-      <Plus size={compactDesign.icon.medium} color="#FFFFFF" strokeWidth={3} />
-    </TouchableOpacity>
-  );
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   return (
+    <>
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: theme.colors.primary,
@@ -51,21 +45,27 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarTestID: 'tab-home',
+          title: 'Discover',
+          tabBarTestID: 'tab-discover',
           tabBarIcon: ({ color, focused }) => (
             <Home size={compactDesign.icon.medium} color={color} strokeWidth={focused ? 2.5 : 2} />
           ),
         }}
       />
       <Tabs.Screen
+        name="map"
+        options={{
+          title: 'Map',
+          tabBarTestID: 'tab-map',
+          tabBarIcon: ({ color, focused }) => (
+            <MapPin size={compactDesign.icon.medium} color={color} strokeWidth={focused ? 2.5 : 2} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="explore"
         options={{
-          title: 'Explore',
-          tabBarTestID: 'tab-explore',
-          tabBarIcon: ({ color, focused }) => (
-            <Compass size={compactDesign.icon.medium} color={color} strokeWidth={focused ? 2.5 : 2} />
-          ),
+          href: null, // Hide the old explore tab
         }}
       />
       <Tabs.Screen
@@ -73,34 +73,76 @@ export default function TabLayout() {
         options={{
           title: '',
           tabBarTestID: 'tab-add',
-          tabBarIcon: () => <FloatingAddButton />,
+          tabBarButton: (props) => (
+            <TouchableOpacity
+              style={styles.addButtonWrapper}
+              onPress={() => setShowCreateModal(true)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.floatingButton}>
+                <Plus size={compactDesign.icon.medium} color="#FFFFFF" strokeWidth={3} />
+              </View>
+            </TouchableOpacity>
+          ),
+        }}
+      />
+      
+      <Tabs.Screen
+        name="saves"
+        options={{
+          title: 'Saves',
+          tabBarTestID: 'tab-saves',
+          tabBarIcon: ({ color, focused }) => (
+            <Bookmark size={compactDesign.icon.medium} color={color} strokeWidth={focused ? 2.5 : 2} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="more"
+        options={{
+          title: 'More',
+          tabBarTestID: 'tab-more',
+          tabBarIcon: ({ color, focused }) => (
+            <MoreHorizontal size={compactDesign.icon.medium} color={color} strokeWidth={focused ? 2.5 : 2} />
+          ),
+        }}
+      />
+      {/* Hidden tabs - accessible from More screen */}
+      <Tabs.Screen
+        name="profile"
+        options={{
+          href: null, // Hide from tab bar
         }}
       />
       <Tabs.Screen
         name="activity"
         options={{
-          title: 'Activity',
-          tabBarTestID: 'tab-activity',
-          tabBarIcon: ({ color, focused }) => (
-            <Heart size={compactDesign.icon.medium} color={color} strokeWidth={focused ? 2.5 : 2} />
-          ),
+          href: null, // Hide from tab bar
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="communities"
         options={{
-          title: 'Profile',
-          tabBarTestID: 'tab-profile',
-          tabBarIcon: ({ color, focused }) => (
-            <User size={compactDesign.icon.medium} color={color} strokeWidth={focused ? 2.5 : 2} />
-          ),
+          href: null, // Hide from tab bar - accessible from More screen
         }}
       />
     </Tabs>
+    
+    {/* Create Modal */}
+    <CreateModal 
+      visible={showCreateModal} 
+      onClose={() => setShowCreateModal(false)} 
+    />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
+  addButtonWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   floatingButton: {
     width: compactDesign.tabBar.height,
     height: compactDesign.tabBar.height,

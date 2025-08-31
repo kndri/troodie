@@ -139,11 +139,26 @@ export const restaurantService = {
   }): Promise<RestaurantInfo[]> {
     try {
       return await withRetry(async () => {
+        // Split query into individual words for better matching
+        const searchTerms = query.toLowerCase().split(' ').filter(term => term.length > 0)
+        
         let request = supabase
           .from('restaurants')
           .select('*')
-          .or(`name.ilike.%${query}%,address.ilike.%${query}%`)
           .limit(20)
+
+        // Build a more comprehensive search query
+        const orConditions: string[] = []
+        searchTerms.forEach(term => {
+          orConditions.push(`name.ilike.%${term}%`)
+          orConditions.push(`address.ilike.%${term}%`)
+          // Also search in cuisine_types as text
+          orConditions.push(`cuisine_types.cs.{${term}}`)
+        })
+        
+        if (orConditions.length > 0) {
+          request = request.or(orConditions.join(','))
+        }
 
         if (filters?.city) {
           request = request.eq('city', filters.city)
@@ -160,6 +175,18 @@ export const restaurantService = {
         const { data, error } = await request
 
         if (error) {
+          console.error('Search error details:', error)
+          // If the cuisine search fails, try simpler search
+          const fallbackRequest = supabase
+            .from('restaurants')
+            .select('*')
+            .or(`name.ilike.%${query}%,address.ilike.%${query}%`)
+            .limit(20)
+          
+          const { data: fallbackData, error: fallbackError } = await fallbackRequest
+          if (!fallbackError && fallbackData) {
+            return (fallbackData || []).map(restaurant => this.transformRestaurantData(restaurant))
+          }
           throw transformError(error)
         }
         

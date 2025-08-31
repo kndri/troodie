@@ -1,28 +1,26 @@
 /**
- * HOME FEED SCREEN - PURE RESKIN
- * Visual-only changes using Design System v3.0
- * NO FUNCTIONAL CHANGES - EXACT SAME LOGIC AS ORIGINAL
+ * DISCOVER SCREEN - V1.0 Design Implementation
+ * Matches the provided design with stories, personalization, and popular restaurants
  */
 
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import {
   Bell,
   Bookmark,
-  Coffee,
-  Globe,
-  Lock,
+  ChevronRight,
+  Heart,
   MessageSquare,
-  Plus,
   Search,
-  Sparkles,
-  UserPlus,
+  Star,
+  TrendingUp,
   Users,
-  Utensils
+  X
 } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
+  Image,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -32,1037 +30,873 @@ import {
   View
 } from 'react-native';
 
-// KEEP ALL ORIGINAL IMPORTS - NO NEW FUNCTIONALITY
-import { RestaurantCardWithSave } from '@/components/cards/RestaurantCardWithSave';
-import { CitySelector } from '@/components/CitySelector';
-import { ErrorState } from '@/components/ErrorState';
-import QuickSavesBoard from '@/components/home/QuickSavesBoard';
-import { InfoModal } from '@/components/InfoModal';
-import { RestaurantCardWithSaveSkeleton } from '@/components/LoadingSkeleton';
-import { NotificationBadge } from '@/components/NotificationBadge';
-import { NotificationCenter } from '@/components/NotificationCenter';
-import { strings } from '@/constants/strings';
+// Components
+import { DS } from '@/components/design-system/tokens';
+import { ProfileAvatar } from '@/components/ProfileAvatar';
+
+// Contexts & Services
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useOnboarding } from '@/contexts/OnboardingContext';
-import { personas } from '@/data/personas';
-import { useSmoothDataFetch } from '@/hooks/useSmoothDataFetch';
-import { boardService } from '@/services/boardService';
-import { communityService } from '@/services/communityService';
-import { InviteService } from '@/services/inviteService';
-import { locationService } from '@/services/locationService';
-import { notificationService } from '@/services/notificationService';
-import { postService } from '@/services/postService';
+import { ActivityFeedItem, activityFeedService } from '@/services/activityFeedService';
 import { restaurantService } from '@/services/restaurantService';
-import { NetworkSuggestion, TrendingContent } from '@/types/core';
-import { getErrorType } from '@/types/errors';
-import { Notification } from '@/types/notifications';
+import { saveService } from '@/services/saveService';
+import { ToastService } from '@/services/toastService';
+import { RestaurantInfo } from '@/types/core';
+import { formatDistanceToNow } from '@/utils/dateHelpers';
 
-// Import Design System tokens only for styling
-import { DS } from '@/components/design-system/tokens';
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-export default function HomeScreen() {
-  // ============================================
-  // EXACT SAME STATE AND LOGIC AS ORIGINAL
-  // ============================================
+// Story item type
+interface Story {
+  id: string;
+  type: 'user' | 'place' | 'invite' | 'expert';
+  name: string;
+  avatar?: string;
+  label?: string;
+}
+
+export default function DiscoverScreen() {
   const router = useRouter();
-  const { userState, hasCreatedBoard, hasCreatedPost, hasJoinedCommunity, networkProgress, updateNetworkProgress } = useApp();
-  const { user } = useAuth();
-  const { state: onboardingState } = useOnboarding();
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [showNotificationCenter, setShowNotificationCenter] = useState(false);
-  const [showRecommendationsInfo, setShowRecommendationsInfo] = useState(false);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const { user, isAuthenticated, isAnonymous } = useAuth();
+  const { userState } = useApp();
+  
+  // State
   const [selectedCity, setSelectedCity] = useState('Charlotte');
-  const [cityLoading, setCityLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showPersonalization, setShowPersonalization] = useState(true);
   
-  const persona = useMemo(
-    () => onboardingState.persona && personas[onboardingState.persona],
-    [onboardingState.persona]
-  );
-  const inviteService = useMemo(() => new InviteService(), []);
+  // Data states
+  const [popularRestaurants, setPopularRestaurants] = useState<RestaurantInfo[]>([]);
+  const [stories, setStories] = useState<Story[]>([]);
+  const [savedStates, setSavedStates] = useState<Record<string, boolean>>({});
+  const [recentActivities, setRecentActivities] = useState<ActivityFeedItem[]>([]);
+  const [globalActivities, setGlobalActivities] = useState<ActivityFeedItem[]>([]);
 
-  // EXACT SAME DATA FETCHING AS ORIGINAL
-  const fetchHomeData = useCallback(async () => {
-    const [topRated, featured] = await Promise.all([
-      restaurantService.getTopRatedRestaurants(selectedCity),
-      restaurantService.getFeaturedRestaurants(10)
-    ]);
-    
-    return { topRated, featured };
-  }, [selectedCity]);
-
-  const fetchUserBoards = useCallback(async () => {
-    if (!user?.id) return [];
+  // Fetch data
+  const fetchData = useCallback(async () => {
     try {
-      return await boardService.getUserBoards(user.id);
-    } catch (error) {
-      if (__DEV__) {
-        console.error('Error loading boards:', error);
-      }
-      return [];
-    }
-  }, [user?.id]);
+      setLoading(true);
 
-  // EXACT SAME HOOKS AS ORIGINAL
-  const { 
-    data: restaurantsData, 
-    loading, 
-    refreshing, 
-    error,
-    refresh: refreshRestaurants 
-  } = useSmoothDataFetch(fetchHomeData, [selectedCity], {
-    minLoadingTime: 500,
-    showLoadingOnRefetch: false,
-    fetchOnFocus: false,
-    cacheDuration: 5000
-  });
+      // Fetch popular restaurants (limit to 3)
+      const restaurants = await restaurantService.getTopRatedRestaurants(selectedCity);
+      setPopularRestaurants(restaurants.slice(0, 3));
 
-  const { 
-    data: userBoards = [], 
-    refresh: refreshBoards,
-    silentRefresh: silentRefreshBoards
-  } = useSmoothDataFetch(fetchUserBoards, [user?.id], {
-    minLoadingTime: 300,
-    showLoadingOnRefetch: false,
-    fetchOnFocus: true,
-    cacheDuration: 60000
-  });
+      // Fetch recent activities if authenticated
+      if (isAuthenticated && user?.id) {
+        // Check saved states
+        const states: Record<string, boolean> = {};
+        for (const restaurant of restaurants) {
+          const state = await saveService.getSaveState(restaurant.id, user.id);
+          states[restaurant.id] = state.isSaved;
+        }
+        setSavedStates(states);
 
-  const topRatedRestaurants = restaurantsData?.topRated || [];
-  const featuredRestaurants = restaurantsData?.featured || [];
-
-  // EXACT SAME FUNCTIONS AS ORIGINAL
-  const checkUserProgress = useCallback(async () => {
-    if (!user?.id) return;
-    
-    try {
-      const [boards, posts, communitiesData] = await Promise.all([
-        boardService.getUserBoards(user.id),
-        postService.getUserPosts(user.id),
-        communityService.getUserCommunities(user.id)
-      ]);
-      
-      const hasJoined = (communitiesData.joined?.length > 0) || (communitiesData.created?.length > 0);
-      
-      if (boards.length > 0 && !hasCreatedBoard) {
-        updateNetworkProgress('board');
-      }
-      if (posts.length > 0 && !hasCreatedPost) {
-        updateNetworkProgress('post');
-      }
-      if (hasJoined && !hasJoinedCommunity) {
-        updateNetworkProgress('community');
-      }
-    } catch (error) {
-      if (__DEV__) {
-        console.error('Error checking user progress:', error);
-      }
-    }
-  }, [user?.id, hasCreatedBoard, hasCreatedPost, hasJoinedCommunity, updateNetworkProgress]);
-
-  const loadUnreadCount = useCallback(async () => {
-    if (!user?.id) return;
-    try {
-      const count = await notificationService.getUnreadCount(user.id);
-      setUnreadCount(count);
-    } catch (error) {
-      if (__DEV__) {
-        console.error('Error loading notification count:', error);
-      }
-    }
-  }, [user?.id]);
-
-  // EXACT SAME EFFECTS AS ORIGINAL
-  useEffect(() => {
-    let isMounted = true;
-    
-    const initializeLocation = async () => {
-      await locationService.initialize();
-      const city = await locationService.detectCurrentCity();
-      
-      if (isMounted && locationService.isCityAvailable(city)) {
-        setSelectedCity(city);
-      }
-    };
-    
-    initializeLocation();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const handleCityChange = useCallback((newCity: string) => {
-    if (newCity !== selectedCity) {
-      setCityLoading(true);
-      setSelectedCity(newCity);
-      setTimeout(() => setCityLoading(false), 1000);
-    }
-  }, [selectedCity]);
-
-  useEffect(() => {
-    if (user?.id) {
-      loadUnreadCount();
-      checkUserProgress();
-    }
-  }, [user?.id, loadUnreadCount, checkUserProgress]);
-
-  const onRefresh = async () => {
-    await Promise.all([
-      refreshRestaurants(),
-      refreshBoards(),
-      user?.id && loadUnreadCount(),
-      user?.id && checkUserProgress()
-    ]);
-  };
-
-  const handleBoardUpdate = async () => {
-    await silentRefreshBoards();
-    setRefreshTrigger(prev => prev + 1);
-  };
-
-  const handleNotificationPress = (notification: Notification) => {
-    setShowNotificationCenter(false);
-  };
-
-  const transformToTopRatedContent = useCallback((restaurants: any[]): TrendingContent[] => {
-    return restaurants.map(restaurant => ({
-      restaurant: {
-        id: restaurant.id,
-        name: restaurant.name,
-        image: restaurant.cover_photo_url || restaurant.photos?.[0] || '',
-        cuisine: restaurant.cuisine_types?.[0] || 'Restaurant',
-        rating: restaurant.troodie_rating || restaurant.google_rating || 0,
-        location: restaurant.city || 'Charlotte',
-        priceRange: restaurant.price_range || '$$'
-      },
-      stats: {
-        saves: restaurant.troodie_reviews_count || 0,
-        visits: restaurant.saves_count || 0,
-        photos: restaurant.photos?.length || 0
-      },
-      highlights: [
-        `${restaurant.google_rating?.toFixed(1) || 'N/A'} ★ rating`,
-        restaurant.cuisine_types?.[0] || 'Restaurant',
-        restaurant.price_range || '$$'
-      ],
-      type: 'trending_spot' as const
-    }));
-  }, []);
-  
-  const topRatedContent = useMemo(
-    () => transformToTopRatedContent(topRatedRestaurants),
-    [topRatedRestaurants, transformToTopRatedContent]
-  );
-
-  const handleInviteFriends = async () => {
-    try {
-      const inviteLink = await inviteService.generateInviteLink(user!.id);
-    } catch (error) {
-      console.error('Error creating invite link:', error);
-    }
-  };
-
-  const networkSuggestions: NetworkSuggestion[] = [
-    {
-      action: 'Create Board',
-      description: 'Organize your favorite restaurants into collections',
-      icon: Bookmark,
-      cta: 'Create Board',
-      benefit: 'Keep your saves organized',
-      onClick: () => router.push('/add/create-board'),
-      condition: () => !hasCreatedBoard,
-      completed: hasCreatedBoard
-    },
-    {
-      action: 'Create Post',
-      description: 'Share your restaurant experiences with the community',
-      icon: MessageSquare,
-      cta: 'Share Experience',
-      benefit: 'Connect with other food lovers',
-      onClick: () => router.push('/add/create-post'),
-      condition: () => !hasCreatedPost,
-      completed: hasCreatedPost
-    },
-    {
-      action: 'Join Community',
-      description: 'Connect with people who share your dining interests',
-      icon: Users,
-      cta: 'Find Communities',
-      benefit: 'Discover new restaurants together',
-      onClick: () => router.push('/add/communities'),
-      condition: () => !hasJoinedCommunity,
-      completed: hasJoinedCommunity
-    }
-  ];
-
-  const filteredNetworkSuggestions = networkSuggestions.filter(suggestion => 
-    suggestion.condition ? suggestion.condition() : true
-  );
-
-  // ============================================
-  // RENDER SECTIONS - RESKINNED WITH DESIGN SYSTEM
-  // ============================================
-  
-  const renderHeader = () => (
-    <View style={styles.header}>
-      <View style={styles.headerTop}>
-        <Text style={styles.brandName}>{strings.app.name}</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.headerButton} onPress={() => router.push('/explore')}>
-            <Search size={24} color={DS.colors.textDark} />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.headerButton} 
-            onPress={() => setShowNotificationCenter(true)}
-          >
-            <View style={styles.notificationContainer}>
-              <Bell size={24} color={DS.colors.textDark} />
-              <NotificationBadge count={unreadCount} size="small" />
-            </View>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
-  );
-
-  const renderWelcomeBanner = () => (
-    <View style={styles.welcomeBannerContainer}>
-      <LinearGradient
-        colors={['#FFF5E6', '#FFE5CC']}
-        style={styles.welcomeBanner}
-      >
-        <View style={styles.welcomeContent}>
-          <View style={styles.welcomeIconContainer}>
-            <Sparkles size={20} color={DS.colors.textWhite} />
-          </View>
-          <View style={styles.welcomeTextContainer}>
-            <Text style={styles.welcomeTitle}>Welcome to {strings.app.name}!</Text>
-            <Text style={styles.welcomeDescription}>
-              {strings.app.tagline}
-            </Text>
-          </View>
-          <TouchableOpacity 
-            style={styles.welcomeCTA} 
-            onPress={() => router.push('/explore')}
-          >
-            <Text style={styles.welcomeCTAText}>Get Started</Text>
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
-    </View>
-  );
-
-  const renderNetworkBuilding = () => {
-    if (hasCreatedBoard && hasCreatedPost && hasJoinedCommunity) {
-      return null;
-    }
-
-    return (
-      <View style={styles.section}>
-        <View style={styles.networkHeader}>
-          <View style={styles.networkTitleContainer}>
-            <UserPlus size={16} color={DS.colors.primaryOrange} />
-            <Text style={styles.sectionTitle}>Build Your Network</Text>
-          </View>
-          <View style={styles.networkProgress}>
-            <Text style={styles.progressText}>
-              {networkProgress} of 3 completed
-            </Text>
-          </View>
-        </View>
-        <View style={styles.networkCards}>
-          {filteredNetworkSuggestions.map((suggestion, index) => (
-            <TouchableOpacity 
-              key={index} 
-              style={[
-                styles.networkCard,
-                suggestion.completed && styles.networkCardCompleted
-              ]}
-              onPress={suggestion.onClick}
-            >
-              <View style={styles.networkCardIcon}>
-                <suggestion.icon size={20} color={DS.colors.primaryOrange} />
-                {suggestion.completed && (
-                  <View style={styles.completedBadge}>
-                    <Text style={styles.completedText}>✓</Text>
-                  </View>
-                )}
-              </View>
-              <View style={styles.networkCardContent}>
-                <Text style={styles.networkCardTitle}>{suggestion.action}</Text>
-                <Text style={styles.networkCardDescription}>{suggestion.description}</Text>
-                <Text style={styles.networkCardBenefit}>{suggestion.benefit}</Text>
-              </View>
-              <TouchableOpacity 
-                style={[
-                  styles.networkCardCTA,
-                  suggestion.completed && styles.networkCardCTACompleted
-                ]} 
-                onPress={suggestion.onClick}
-              >
-                <Text style={styles.networkCardCTAText}>
-                  {suggestion.completed ? 'Completed' : suggestion.cta}
-                </Text>
-              </TouchableOpacity>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-    );
-  };
-
-  const renderPersonalizedSection = () => (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Perfect For You</Text>
-        {persona && (
-          <View style={styles.personaBadge}>
-            <Text style={styles.personaEmoji}>{persona.emoji}</Text>
-            <Text style={styles.personaName}>{persona.name}</Text>
-          </View>
-        )}
-      </View>
-      
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-        <TouchableOpacity style={styles.categoryCard}>
-          <View style={[styles.categoryIcon, { backgroundColor: '#FFE5B4' }]}>
-            <Coffee size={24} color="#8B4513" />
-          </View>
-          <Text style={styles.categoryName}>Quick Lunch Spots</Text>
-          <Text style={styles.categoryDescription}>Perfect for your busy schedule</Text>
-          <Text style={styles.categoryCount}>12 restaurants</Text>
-          <TouchableOpacity style={styles.categoryButton}>
-            <Text style={styles.categoryButtonText}>Explore</Text>
-          </TouchableOpacity>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.categoryCard}>
-          <View style={[styles.categoryIcon, { backgroundColor: '#E5D4FF' }]}>
-            <Utensils size={24} color="#6B46C1" />
-          </View>
-          <Text style={styles.categoryName}>Date Night Ready</Text>
-          <Text style={styles.categoryDescription}>Romantic spots for special occasions</Text>
-          <Text style={styles.categoryCount}>8 restaurants</Text>
-          <TouchableOpacity style={styles.categoryButton}>
-            <Text style={styles.categoryButtonText}>Explore</Text>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </ScrollView>
-    </View>
-  );
-
-  const renderYourBoards = () => (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Your Boards</Text>
-        <TouchableOpacity onPress={() => router.push('/(tabs)/profile')}>
-          <Text style={styles.seeAll}>See all</Text>
-        </TouchableOpacity>
-      </View>
-      
-      {(userBoards || []).length === 0 ? (
-        <View style={styles.emptyState}>
-          <View style={styles.emptyStateIcon}>
-            <Bookmark size={32} color={DS.colors.borderLight} />
-          </View>
-          <Text style={styles.emptyStateTitle}>Create Your First Board</Text>
-          <Text style={styles.emptyStateDescription}>
-            Organize your favorite restaurants into collections
-          </Text>
-          <TouchableOpacity style={styles.emptyStateCTA} onPress={() => router.push('/add/create-board')}>
-            <Text style={styles.emptyStateCTAText}>Create Board</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-          {(userBoards || []).slice(0, 5).map((board) => (
-            <TouchableOpacity 
-              key={board.id} 
-              style={styles.boardCard}
-              onPress={() => router.push(`/boards/${board.id}`)}
-            >
-              <View style={styles.boardCardHeader}>
-                <View style={styles.boardCardIcon}>
-                  <Bookmark size={20} color={DS.colors.primaryOrange} />
-                </View>
-                <Text style={styles.boardCardTitle} numberOfLines={1}>
-                  {board.title}
-                </Text>
-              </View>
-              <Text style={styles.boardCardDescription} numberOfLines={2}>
-                {board.description || 'No description'}
-              </Text>
-              <View style={styles.boardCardFooter}>
-                <Text style={styles.boardCardCount}>
-                  {board.restaurant_count || 0} restaurants
-                </Text>
-                <View style={styles.boardCardPrivacy}>
-                  {board.is_private ? (
-                    <Lock size={12} color={DS.colors.textLight} />
-                  ) : (
-                    <Globe size={12} color={DS.colors.textLight} />
-                  )}
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
-    </View>
-  );
-
-  const renderTopRatedSection = () => {
-    return (
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <View style={styles.titleContainer}>
-            <Text style={styles.sectionTitle}>
-              Top Rated in {selectedCity}
-            </Text>
-            <CitySelector
-              currentCity={selectedCity}
-              onCityChange={handleCityChange}
-              compact
-            />
-          </View>
-        </View>
+        // Fetch activity feed
+        const { data: activities } = await activityFeedService.getActivityFeed(
+          user.id,
+          { 
+            filter: userState.friendsCount > 0 ? 'friends' : 'all',
+            limit: 10 
+          }
+        );
+        setRecentActivities(activities.slice(0, 10));
+      } else {
+        // For non-authenticated users, show global activity
+        const { data: globalFeed } = await activityFeedService.getActivityFeed(
+          null,
+          { 
+            filter: 'all',
+            limit: 10 
+          }
+        );
         
-        {cityLoading ? (
-          <>
-            <RestaurantCardWithSaveSkeleton />
-            <RestaurantCardWithSaveSkeleton />
-            <RestaurantCardWithSaveSkeleton />
-          </>
-        ) : topRatedRestaurants.length === 0 ? (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyStateIcon}>
-              <Sparkles size={32} color={DS.colors.borderLight} />
-            </View>
-            <Text style={styles.emptyStateTitle}>
-              No restaurants found in {selectedCity}
-            </Text>
-            <Text style={styles.emptyStateDescription}>
-              Be the first to discover and share amazing restaurants in this area!
-            </Text>
-            <TouchableOpacity 
-              style={styles.emptyStateCTA} 
-              onPress={() => router.push('/add/save-restaurant')}
-            >
-              <Plus size={16} color={DS.colors.textWhite} />
-              <Text style={styles.emptyStateCTAText}>Add Restaurant</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          topRatedContent.map((item, index) => (
-            <View key={index} style={styles.trendingCard}>
-              <RestaurantCardWithSave
-                restaurant={item.restaurant}
-                stats={item.stats}
-                onPress={() => {
-                  router.push({
-                    pathname: '/restaurant/[id]',
-                    params: { id: item.restaurant.id },
-                  });
-                }}
-                onRefresh={handleBoardUpdate}
-                highlights={item.highlights}
-              />
-            </View>
-          ))
-        )}
-      </View>
-    );
+        // Add some mock activities for better demo
+        const mockActivities = [
+          {
+            activity_id: 'mock-1',
+            activity_type: 'post',
+            actor_name: 'Ava',
+            target_name: 'Ramen Katsu',
+            rating: 5.0,
+            created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+          },
+          {
+            activity_id: 'mock-2', 
+            activity_type: 'save',
+            actor_name: 'Your reservation',
+            target_name: 'Sushi Mori',
+            created_at: new Date(Date.now() - 28 * 60 * 60 * 1000).toISOString(),
+          },
+          {
+            activity_id: 'mock-3',
+            activity_type: 'follow',
+            actor_name: 'Liam',
+            created_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+          },
+          {
+            activity_id: 'mock-4',
+            activity_type: 'trending',
+            created_at: new Date().toISOString(),
+          },
+          {
+            activity_id: 'mock-5',
+            activity_type: 'comment',
+            actor_name: 'Emma',
+            target_name: 'Pizzeria Bianco',
+            comment_text: 'Crisp crust, bright sauce — must try.',
+            created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+          },
+        ];
+        
+        // Combine mock and real activities
+        const combinedActivities = [...mockActivities, ...globalFeed].slice(0, 10);
+        setGlobalActivities(combinedActivities);
+      }
+
+      // Mock stories data
+      setStories([
+        { id: 'you', type: 'user', name: 'You' },
+        { id: 'find', type: 'invite', name: 'Find Friends', label: 'Find Friends' },
+        { id: 'invite', type: 'invite', name: 'Invite', label: 'Invite' },
+        { id: 'experts', type: 'expert', name: 'Experts', label: 'Experts' },
+      ]);
+
+    } catch (error) {
+      console.error('Error fetching discover data:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [selectedCity, isAuthenticated, user?.id, userState.friendsCount]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchData();
   };
 
-  const renderQuickActions = () => (
-    <View style={styles.quickActions}>
-      <TouchableOpacity style={styles.quickActionButton}>
-        <Plus size={20} color={DS.colors.textWhite} />
-        <Text style={styles.quickActionText}>Add Place</Text>
-      </TouchableOpacity>
-    </View>
-  );
+  const handleSaveToggle = async (restaurant: RestaurantInfo) => {
+    if (!isAuthenticated) {
+      router.push('/onboarding/splash');
+      return;
+    }
 
-  if (loading && !error) {
+    if (!user?.id) return;
+
+    const isSaved = savedStates[restaurant.id];
+    
+    // Optimistic update
+    setSavedStates(prev => ({
+      ...prev,
+      [restaurant.id]: !isSaved
+    }));
+
+    try {
+      await saveService.toggleSave({
+        userId: user.id,
+        restaurantId: restaurant.id,
+        restaurantName: restaurant.name,
+        onBoardSelection: () => router.push(`/restaurant/${restaurant.id}/add-to-board`),
+      });
+    } catch (error) {
+      // Revert on error
+      setSavedStates(prev => ({
+        ...prev,
+        [restaurant.id]: isSaved
+      }));
+      ToastService.showError('Failed to save restaurant');
+    }
+  };
+
+  const handleStoryPress = (story: Story) => {
+    switch (story.type) {
+      case 'invite':
+        if (story.id === 'find') {
+          router.push('/friends/find');
+        } else {
+          router.push('/friends/invite');
+        }
+        break;
+      case 'expert':
+        router.push('/experts');
+        break;
+      case 'user':
+        router.push('/add');
+        break;
+    }
+  };
+
+  const formatTimeAgo = (minutes: number) => {
+    if (minutes < 60) return `${minutes} min walk`;
+    const hours = Math.floor(minutes / 60);
+    return `${hours}h ${minutes % 60}m`;
+  };
+
+  if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        {renderHeader()}
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={DS.colors.primaryOrange} />
-          <Text style={styles.loadingText}>Loading {selectedCity}&apos;s best spots...</Text>
         </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (error && !topRatedRestaurants.length && !featuredRestaurants.length) {
-    return (
-      <SafeAreaView style={styles.container}>
-        {renderHeader()}
-        <ErrorState
-          error={error}
-          errorType={getErrorType(error)}
-          onRetry={refreshRestaurants}
-          retrying={refreshing}
-          fullScreen
-        />
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
+      <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={DS.colors.primaryOrange}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
-        {renderHeader()}
-        
-        {userState.isNewUser && renderWelcomeBanner()}
-        
-        {renderNetworkBuilding()}
-        
-        {user && <QuickSavesBoard refreshTrigger={refreshTrigger} />}
-        
-        {renderYourBoards()}
-        
-        {renderTopRatedSection()}
-        
-        <View style={styles.bottomPadding} />
+        {/* Header */}
+        <View style={styles.header}>
+          <ProfileAvatar size={36} style={styles.profileAvatar} />
+          
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Discover</Text>
+            <TouchableOpacity style={styles.locationRow} onPress={() => {}}>
+              <Text style={styles.locationText}>Good evening • East Village</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <TouchableOpacity style={styles.searchButton} onPress={() => router.push('/search')}>
+            <Search size={24} color={DS.colors.textDark} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Personalization Banner */}
+        {showPersonalization && !isAuthenticated && (
+          <View style={styles.personalizationBanner}>
+            <View style={styles.personalizationContent}>
+              <View style={styles.personalizationIcon}>
+                <TrendingUp size={20} color={DS.colors.primaryOrange} />
+              </View>
+              <View style={styles.personalizationText}>
+                <Text style={styles.personalizationTitle}>New here? Let's personalize</Text>
+                <Text style={styles.personalizationSubtitle}>
+                  We'll tailor your feed while you find friends and set your tastes.
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowPersonalization(false)}>
+                <X size={20} color={DS.colors.textGray} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.personalizationActions}>
+              <TouchableOpacity style={styles.preferenceButton}>
+                <Text style={styles.preferenceButtonText}>Set preferences</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.findFriendsButton}>
+                <Text style={styles.findFriendsButtonText}>Find friends</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Activity Section */}
+        <View style={styles.activitySection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Activity</Text>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/activity')}>
+              <Text style={styles.seeAllButton}>See all</Text>
+              <ChevronRight size={16} color={DS.colors.primaryOrange} style={{ marginLeft: 4 }} />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.activityList}>
+            {(isAuthenticated ? recentActivities : globalActivities).slice(0, 5).map((activity, index) => {
+              // Determine activity icon, text and colors
+              let iconBg = '#FFF3E0';
+              let iconColor = '#FFB800';
+              let icon = <Star size={18} color={iconColor} />;
+              let primaryText = '';
+              let secondaryText = '';
+              let avatarUri = null;
+              
+              switch (activity.activity_type) {
+                case 'post':
+                  iconBg = '#FFF3E0';
+                  iconColor = '#FFB800';
+                  icon = <Star size={18} color={iconColor} fill={iconColor} />;
+                  primaryText = `${activity.actor_name} rated ${activity.target_name || 'a place'} ${activity.rating || 5.0}`;
+                  secondaryText = activity.created_at ? formatDistanceToNow(activity.created_at) : '3m ago';
+                  break;
+                case 'save':
+                  iconBg = '#E8F5E9';
+                  iconColor = '#4CAF50';
+                  icon = <Bookmark size={18} color={iconColor} fill={iconColor} />;
+                  if (activity.target_name?.includes('Sushi Mori')) {
+                    primaryText = `Your reservation at ${activity.target_name} is confirmed for tonight at 7:30 PM`;
+                  } else {
+                    primaryText = `${activity.actor_name} saved ${activity.target_name || 'a place'}`;
+                  }
+                  secondaryText = activity.created_at ? formatDistanceToNow(activity.created_at) : '28m ago';
+                  break;
+                case 'follow':
+                  iconBg = '#E3F2FD';
+                  iconColor = '#2196F3';
+                  icon = <Users size={18} color={iconColor} />;
+                  primaryText = `${activity.actor_name} started following you.`;
+                  secondaryText = formatDistanceToNow(activity.created_at);
+                  avatarUri = activity.actor_avatar;
+                  break;
+                case 'trending':
+                  iconBg = '#FCE4EC';
+                  iconColor = '#E91E63';
+                  icon = <TrendingUp size={18} color={iconColor} />;
+                  primaryText = `12 new places are trending near you.`;
+                  secondaryText = 'Today';
+                  break;
+                case 'comment':
+                  iconBg = '#F3E5F5';
+                  iconColor = '#9C27B0';
+                  icon = <MessageSquare size={18} color={iconColor} />;
+                  primaryText = `${activity.actor_name} reviewed ${activity.target_name}: "${activity.comment_text || 'Great place!'}"`;  
+                  secondaryText = formatDistanceToNow(activity.created_at);
+                  break;
+                default:
+                  primaryText = `${activity.actor_name} ${activity.activity_type} ${activity.target_name || ''}`;
+                  secondaryText = formatDistanceToNow(activity.created_at);
+              }
+              
+              return (
+                <TouchableOpacity
+                  key={activity.activity_id || `activity-${index}`}
+                  style={styles.activityItem}
+                  onPress={() => {
+                    if (activity.restaurant_id) {
+                      router.push(`/restaurant/${activity.restaurant_id}`);
+                    } else if (activity.related_user_id) {
+                      router.push(`/user/${activity.related_user_id}`);
+                    } else {
+                      router.push('/(tabs)/activity');
+                    }
+                  }}
+                >
+                  <View style={[styles.activityIcon, { backgroundColor: iconBg }]}>
+                    {avatarUri ? (
+                      <Image source={{ uri: avatarUri }} style={styles.activityIconAvatar} />
+                    ) : (
+                      icon
+                    )}
+                  </View>
+                  <View style={styles.activityTextContent}>
+                    <Text style={styles.activityPrimaryText} numberOfLines={2}>
+                      {primaryText}
+                    </Text>
+                    <Text style={styles.activitySecondaryText}>
+                      {secondaryText}
+                    </Text>
+                  </View>
+                  {avatarUri && (
+                    <Image source={{ uri: avatarUri }} style={styles.activityTrailingAvatar} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+            
+            {/* Open Activity Button */}
+            <TouchableOpacity 
+              style={styles.openActivityButton}
+              onPress={() => router.push('/activity')}
+            >
+              <Bell size={20} color={DS.colors.textWhite} />
+              <Text style={styles.openActivityButtonText}>Open Activity</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Popular Near You */}
+        <View style={styles.popularSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Popular near you</Text>
+          </View>
+          
+          {popularRestaurants.map((restaurant, index) => (
+            <TouchableOpacity
+              key={restaurant.id}
+              style={styles.restaurantCard}
+              onPress={() => router.push(`/restaurant/${restaurant.id}`)}
+            >
+              <View style={styles.restaurantImageContainer}>
+                <Image 
+                  source={{ uri: restaurant.main_image || restaurantService.getRestaurantImage(restaurant) }}
+                  style={styles.restaurantImage}
+                />
+                {index === 0 && (
+                  <View style={styles.trendingBadge}>
+                    <TrendingUp size={12} color={DS.colors.textWhite} />
+                    <Text style={styles.trendingText}>Trendin'</Text>
+                  </View>
+                )}
+                {restaurant.distance && (
+                  <View style={styles.distanceBadge}>
+                    <Text style={styles.distanceBadgeText}>
+                      {`${Math.round(restaurant.distance * 20)}-${Math.round(restaurant.distance * 20) + 10} min walk`}
+                    </Text>
+                  </View>
+                )}
+                <TouchableOpacity 
+                  style={styles.saveIconButton}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleSaveToggle(restaurant);
+                  }}
+                >
+                  {savedStates[restaurant.id] ? (
+                    <Heart size={20} color={DS.colors.textWhite} fill={DS.colors.textWhite} />
+                  ) : (
+                    <Heart size={20} color={DS.colors.textWhite} />
+                  )}
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.restaurantContent}>
+                <View style={styles.restaurantHeader}>
+                  <View style={styles.restaurantInfo}>
+                    <Text style={styles.restaurantName}>{restaurant.name}</Text>
+                    <View style={styles.restaurantMeta}>
+                      <View style={styles.ratingContainer}>
+                        <Star size={12} color={DS.colors.primaryOrange} fill={DS.colors.primaryOrange} />
+                        <Text style={styles.rating}>{restaurant.rating || 4.8}</Text>
+                      </View>
+                      <Text style={styles.metaDot}>•</Text>
+                      <Text style={styles.cuisineType}>
+                        {restaurant.cuisine_type || 'Restaurant'}
+                      </Text>
+                      <Text style={styles.metaDot}>•</Text>
+                      <Text style={styles.priceLevel}>
+                        {restaurant.price_level || '$$'}
+                      </Text>
+                    </View>
+                    <Text style={styles.restaurantDescription} numberOfLines={2}>
+                      {restaurant.description || `Rich kimkatsu broth, house-made noodles, late-night friendly.`}
+                    </Text>
+                  </View>
+                  
+                  <TouchableOpacity 
+                    style={styles.saveButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleSaveToggle(restaurant);
+                    }}
+                  >
+                    <Text style={styles.saveButtonText}>Save</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Explore Categories */}
+        <View style={styles.categoriesSection}>
+          <Text style={styles.sectionTitle}>Explore categories</Text>
+          <View style={styles.categoriesGrid}>
+            {['Healthy', 'Brunch', 'Date night', 'New & hot', 'Outdoors', 'Groups'].map((category) => (
+              <TouchableOpacity key={category} style={styles.categoryChip}>
+                <Text style={styles.categoryText}>{category}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
       </ScrollView>
-      
-      {renderQuickActions()}
-
-      {showNotificationCenter && (
-        <NotificationCenter
-          onClose={() => setShowNotificationCenter(false)}
-          onNotificationPress={handleNotificationPress}
-        />
-      )}
-
-      <InfoModal
-        visible={showRecommendationsInfo}
-        onClose={() => setShowRecommendationsInfo(false)}
-        title={strings.recommendations.modalTitle}
-        content={strings.recommendations.modalDescription}
-      />
     </SafeAreaView>
   );
 }
 
-// ============================================
-// STYLES - USING DESIGN SYSTEM TOKENS
-// ============================================
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: DS.colors.background,
   },
-  header: {
-    paddingHorizontal: DS.spacing.lg,
-    paddingTop: DS.spacing.md,
-    paddingBottom: DS.spacing.xl,
-    marginBottom: DS.spacing.xl,
-    borderBottomWidth: 1,
-    borderBottomColor: DS.colors.borderLight,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  brandName: {
-    ...DS.typography.h1,
-    color: DS.colors.textDark,
-    fontWeight: '700',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: DS.spacing.lg,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  welcomeBannerContainer: {
-    marginHorizontal: DS.spacing.lg,
-    marginBottom: DS.spacing.xxl,
-  },
-  welcomeBanner: {
-    padding: DS.spacing.lg,
-    borderRadius: DS.borderRadius.lg,
-    borderWidth: 1,
-    borderColor: DS.colors.primaryOrange + '33',
-    ...DS.shadows.sm,
-  },
-  welcomeContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DS.spacing.md,
-  },
-  welcomeIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: DS.colors.primaryOrange,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  welcomeTextContainer: {
-    flex: 1,
-  },
-  welcomeTitle: {
-    ...DS.typography.h3,
-    color: DS.colors.textDark,
-    marginBottom: 2,
-  },
-  welcomeDescription: {
-    ...DS.typography.metadata,
-    color: DS.colors.textGray,
-  },
-  welcomeCTA: {
-    backgroundColor: DS.colors.primaryOrange,
-    paddingHorizontal: DS.spacing.lg,
-    paddingVertical: DS.spacing.sm,
-    borderRadius: DS.borderRadius.full,
-  },
-  welcomeCTAText: {
-    ...DS.typography.button,
-    color: DS.colors.textWhite,
-  },
-  section: {
-    marginBottom: DS.spacing.xxxl,
-  },
-  sectionHeader: {
-    paddingHorizontal: DS.spacing.lg,
-    marginBottom: DS.spacing.lg,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  sectionTitle: {
-    ...DS.typography.h2,
-    color: DS.colors.textDark,
-  },
-  seeAll: {
-    ...DS.typography.link,
-    color: DS.colors.primaryOrange,
-  },
-  networkHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: DS.spacing.lg,
-    marginBottom: DS.spacing.lg,
-  },
-  networkTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DS.spacing.xs,
-  },
-  networkProgress: {
-    backgroundColor: DS.colors.surfaceLight,
-    paddingHorizontal: DS.spacing.md,
-    paddingVertical: DS.spacing.sm,
-    borderRadius: DS.borderRadius.md,
-  },
-  progressText: {
-    ...DS.typography.metadata,
-    color: DS.colors.textGray,
-    fontWeight: '500',
-  },
-  networkCards: {
-    paddingHorizontal: DS.spacing.lg,
-    gap: DS.spacing.sm,
-  },
-  networkCard: {
-    backgroundColor: DS.colors.surface,
-    borderRadius: DS.borderRadius.md,
-    padding: DS.spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: DS.colors.borderLight,
-    marginBottom: DS.spacing.sm,
-    ...DS.shadows.sm,
-  },
-  networkCardCompleted: {
-    backgroundColor: DS.colors.surfaceLight,
-    borderColor: DS.colors.success,
-  },
-  networkCardIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: DS.colors.primaryOrange + '1A',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: DS.spacing.md,
-    position: 'relative',
-  },
-  completedBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: DS.colors.success,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  completedText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: DS.colors.textWhite,
-  },
-  networkCardContent: {
-    flex: 1,
-  },
-  networkCardTitle: {
-    ...DS.typography.body,
-    fontWeight: '500',
-    color: DS.colors.textDark,
-    marginBottom: 2,
-  },
-  networkCardDescription: {
-    ...DS.typography.caption,
-    color: DS.colors.textGray,
-    marginBottom: 4,
-  },
-  networkCardBenefit: {
-    ...DS.typography.caption,
-    fontWeight: '500',
-    color: DS.colors.primaryOrange,
-  },
-  networkCardCTA: {
-    backgroundColor: DS.colors.surface,
-    borderWidth: 1,
-    borderColor: DS.colors.borderLight,
-    paddingHorizontal: DS.spacing.md,
-    paddingVertical: DS.spacing.sm,
-    borderRadius: DS.borderRadius.sm,
-  },
-  networkCardCTACompleted: {
-    backgroundColor: DS.colors.surfaceLight,
-    borderColor: DS.colors.borderLight,
-  },
-  networkCardCTAText: {
-    ...DS.typography.caption,
-    fontWeight: '500',
-    color: DS.colors.textDark,
-  },
-  personaBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: DS.colors.surfaceLight,
-    paddingHorizontal: DS.spacing.md,
-    paddingVertical: DS.spacing.sm,
-    borderRadius: DS.borderRadius.full,
-    gap: DS.spacing.sm,
-  },
-  personaEmoji: {
-    fontSize: 16,
-  },
-  personaName: {
-    ...DS.typography.caption,
-    fontWeight: '500',
-    color: DS.colors.textGray,
-  },
-  horizontalScroll: {
-    paddingLeft: DS.spacing.lg,
-  },
-  categoryCard: {
-    width: 200,
-    backgroundColor: DS.colors.surface,
-    borderRadius: DS.borderRadius.md,
-    padding: DS.spacing.lg,
-    marginRight: DS.spacing.md,
-    ...DS.shadows.sm,
-  },
-  categoryIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: DS.borderRadius.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: DS.spacing.md,
-  },
-  categoryName: {
-    ...DS.typography.body,
-    fontWeight: '600',
-    color: DS.colors.textDark,
-    marginBottom: DS.spacing.xs,
-  },
-  categoryDescription: {
-    ...DS.typography.caption,
-    color: DS.colors.textGray,
-    marginBottom: DS.spacing.sm,
-  },
-  categoryCount: {
-    ...DS.typography.caption,
-    fontWeight: '500',
-    color: DS.colors.primaryOrange,
-    marginBottom: DS.spacing.md,
-  },
-  categoryButton: {
-    backgroundColor: DS.colors.surfaceLight,
-    paddingVertical: DS.spacing.sm,
-    borderRadius: DS.borderRadius.md,
-    alignItems: 'center',
-  },
-  categoryButtonText: {
-    ...DS.typography.button,
-    color: DS.colors.textDark,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: DS.spacing.xxxl,
-    paddingHorizontal: DS.spacing.xxl,
-    marginHorizontal: DS.spacing.lg,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: DS.colors.borderLight,
-    borderRadius: DS.borderRadius.lg,
-  },
-  emptyStateIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: DS.colors.surfaceLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: DS.spacing.lg,
-  },
-  emptyStateTitle: {
-    ...DS.typography.h3,
-    color: DS.colors.textDark,
-    marginBottom: DS.spacing.sm,
-    textAlign: 'center',
-  },
-  emptyStateDescription: {
-    ...DS.typography.body,
-    color: DS.colors.textGray,
-    textAlign: 'center',
-    marginBottom: DS.spacing.lg,
-  },
-  emptyStateCTA: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DS.spacing.xs,
-    backgroundColor: DS.colors.primaryOrange,
-    paddingHorizontal: DS.spacing.xxl,
-    paddingVertical: DS.spacing.md,
-    borderRadius: DS.borderRadius.full,
-  },
-  emptyStateCTAText: {
-    ...DS.typography.button,
-    color: DS.colors.textWhite,
-  },
-  boardCard: {
-    width: 200,
-    backgroundColor: DS.colors.surface,
-    borderRadius: DS.borderRadius.md,
-    padding: DS.spacing.md,
-    marginRight: DS.spacing.md,
-    ...DS.shadows.sm,
-  },
-  boardCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: DS.spacing.sm,
-  },
-  boardCardIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: DS.colors.primaryOrange + '1A',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: DS.spacing.sm,
-  },
-  boardCardTitle: {
-    ...DS.typography.body,
-    fontWeight: '600',
-    color: DS.colors.textDark,
-    flex: 1,
-  },
-  boardCardDescription: {
-    ...DS.typography.caption,
-    color: DS.colors.textGray,
-    marginBottom: DS.spacing.sm,
-  },
-  boardCardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  boardCardCount: {
-    ...DS.typography.caption,
-    fontWeight: '500',
-    color: DS.colors.primaryOrange,
-  },
-  boardCardPrivacy: {
-    width: 16,
-    height: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DS.spacing.xs,
-    flex: 1,
-  },
-  trendingCard: {
-    paddingHorizontal: DS.spacing.lg,
-    marginBottom: DS.spacing.lg,
-  },
-  quickActions: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    gap: 12,
-  },
-  quickActionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: DS.colors.primaryOrange,
-    paddingHorizontal: DS.spacing.lg,
-    paddingVertical: DS.spacing.md,
-    borderRadius: DS.borderRadius.full,
-    gap: DS.spacing.sm,
-    ...DS.shadows.md,
-  },
-  quickActionText: {
-    ...DS.typography.button,
-    color: DS.colors.textWhite,
-  },
-  bottomPadding: {
-    height: 100,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingBottom: 100,
   },
-  loadingText: {
-    ...DS.typography.body,
+  
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: DS.spacing.lg,
+    paddingVertical: DS.spacing.md,
+    backgroundColor: DS.colors.surface,
+  },
+  profileAvatar: {
+    marginRight: DS.spacing.md,
+  },
+  headerCenter: {
+    flex: 1,
+  },
+  headerTitle: {
+    ...DS.typography.h1,
+    color: DS.colors.textDark,
+  },
+  locationRow: {
+    marginTop: DS.spacing.xs,
+  },
+  locationText: {
+    ...DS.typography.metadata,
     color: DS.colors.textGray,
+  },
+  searchButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: DS.colors.surfaceLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  // Personalization Banner
+  personalizationBanner: {
+    backgroundColor: '#FFF8E1',
+    margin: DS.spacing.lg,
+    padding: DS.spacing.lg,
+    borderRadius: DS.borderRadius.lg,
+  },
+  personalizationContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: DS.spacing.md,
+  },
+  personalizationIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 173, 39, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  personalizationText: {
+    flex: 1,
+  },
+  personalizationTitle: {
+    ...DS.typography.h3,
+    color: DS.colors.textDark,
+  },
+  personalizationSubtitle: {
+    ...DS.typography.metadata,
+    color: DS.colors.textGray,
+    marginTop: DS.spacing.xs,
+  },
+  personalizationActions: {
+    flexDirection: 'row',
+    gap: DS.spacing.sm,
     marginTop: DS.spacing.md,
   },
-  notificationContainer: {
-    position: 'relative'
+  preferenceButton: {
+    flex: 1,
+    paddingVertical: DS.spacing.sm,
+    backgroundColor: DS.colors.textDark,
+    borderRadius: DS.borderRadius.md,
+    alignItems: 'center',
+  },
+  preferenceButtonText: {
+    ...DS.typography.button,
+    color: DS.colors.textWhite,
+  },
+  findFriendsButton: {
+    flex: 1,
+    paddingVertical: DS.spacing.sm,
+    borderWidth: 1,
+    borderColor: DS.colors.textDark,
+    borderRadius: DS.borderRadius.md,
+    alignItems: 'center',
+  },
+  findFriendsButtonText: {
+    ...DS.typography.button,
+    color: DS.colors.textDark,
+  },
+  
+  // Activity Section
+  activitySection: {
+    paddingTop: DS.spacing.lg,
+    marginBottom: DS.spacing.lg,
+  },
+  sectionTitle: {
+    ...DS.typography.h2,
+    color: DS.colors.textDark,
+    paddingHorizontal: DS.spacing.lg,
+    marginBottom: DS.spacing.sm,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: DS.spacing.lg,
+    marginBottom: DS.spacing.md,
+  },
+  seeAllButton: {
+    ...DS.typography.button,
+    color: DS.colors.primaryOrange,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  activityList: {
+    backgroundColor: DS.colors.surface,
+    marginHorizontal: DS.spacing.lg,
+    borderRadius: DS.borderRadius.lg,
+    overflow: 'hidden',
+  },
+  activityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: DS.spacing.md,
+    paddingHorizontal: DS.spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: DS.colors.borderLight,
+  },
+  activityIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: DS.spacing.md,
+  },
+  activityIconAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  activityTextContent: {
+    flex: 1,
+    marginRight: DS.spacing.sm,
+  },
+  activityPrimaryText: {
+    ...DS.typography.body,
+    color: DS.colors.textDark,
+    lineHeight: 20,
+  },
+  activitySecondaryText: {
+    ...DS.typography.caption,
+    color: DS.colors.textGray,
+    marginTop: 2,
+  },
+  activityTrailingAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  openActivityButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: DS.spacing.sm,
+    paddingVertical: DS.spacing.md,
+    backgroundColor: DS.colors.textDark,
+    borderBottomLeftRadius: DS.borderRadius.lg,
+    borderBottomRightRadius: DS.borderRadius.lg,
+  },
+  openActivityButtonText: {
+    ...DS.typography.button,
+    color: DS.colors.textWhite,
+  },
+  
+  // No Activity Card
+  noActivityCard: {
+    backgroundColor: DS.colors.surfaceLight,
+    margin: DS.spacing.lg,
+    padding: DS.spacing.lg,
+    borderRadius: DS.borderRadius.lg,
+  },
+  noActivityText: {
+    marginTop: DS.spacing.md,
+  },
+  noActivityTitle: {
+    ...DS.typography.h3,
+    color: DS.colors.textDark,
+  },
+  noActivitySubtitle: {
+    ...DS.typography.metadata,
+    color: DS.colors.textGray,
+    marginTop: DS.spacing.xs,
+  },
+  noActivityActions: {
+    flexDirection: 'row',
+    gap: DS.spacing.md,
+    marginTop: DS.spacing.lg,
+  },
+  postStoryButton: {
+    paddingVertical: DS.spacing.sm,
+    paddingHorizontal: DS.spacing.lg,
+    backgroundColor: DS.colors.textDark,
+    borderRadius: DS.borderRadius.md,
+  },
+  postStoryButtonText: {
+    ...DS.typography.button,
+    color: DS.colors.textWhite,
+  },
+  findFriendsLinkButton: {
+    paddingVertical: DS.spacing.sm,
+    paddingHorizontal: DS.spacing.lg,
+  },
+  findFriendsLinkText: {
+    ...DS.typography.button,
+    color: DS.colors.textDark,
+  },
+  noActivityPreview: {
+    alignItems: 'center',
+    paddingVertical: DS.spacing.xl,
+  },
+  noActivityText: {
+    ...DS.typography.body,
+    color: DS.colors.textGray,
+    marginBottom: DS.spacing.sm,
+  },
+  findFriendsLink: {
+    ...DS.typography.button,
+    color: DS.colors.primaryOrange,
+  },
+  
+  // Popular Section
+  popularSection: {
+    paddingTop: DS.spacing.lg,
+  },
+  restaurantCard: {
+    marginHorizontal: DS.spacing.lg,
+    marginBottom: DS.spacing.lg,
+  },
+  restaurantImageContainer: {
+    position: 'relative',
+    marginBottom: DS.spacing.md,
+  },
+  restaurantImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: DS.borderRadius.lg,
+  },
+  trendingBadge: {
+    position: 'absolute',
+    top: DS.spacing.md,
+    left: DS.spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FF6B6B',
+    paddingHorizontal: DS.spacing.sm,
+    paddingVertical: 4,
+    borderRadius: DS.borderRadius.full,
+  },
+  trendingText: {
+    ...DS.typography.caption,
+    color: DS.colors.textWhite,
+    fontWeight: '600',
+  },
+  distanceBadge: {
+    position: 'absolute',
+    bottom: DS.spacing.md,
+    left: DS.spacing.md,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: DS.spacing.sm,
+    paddingVertical: 4,
+    borderRadius: DS.borderRadius.md,
+  },
+  distanceBadgeText: {
+    ...DS.typography.caption,
+    color: DS.colors.textWhite,
+  },
+  saveIconButton: {
+    position: 'absolute',
+    top: DS.spacing.md,
+    right: DS.spacing.md,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  restaurantContent: {
+    paddingHorizontal: DS.spacing.xs,
+  },
+  restaurantHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  restaurantInfo: {
+    flex: 1,
+    marginRight: DS.spacing.md,
+  },
+  restaurantName: {
+    ...DS.typography.h3,
+    color: DS.colors.textDark,
+    marginBottom: DS.spacing.xs,
+  },
+  restaurantMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: DS.spacing.xs,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  rating: {
+    ...DS.typography.metadata,
+    color: DS.colors.textDark,
+    fontWeight: '600',
+  },
+  metaDot: {
+    ...DS.typography.metadata,
+    color: DS.colors.textGray,
+    marginHorizontal: DS.spacing.xs,
+  },
+  cuisineType: {
+    ...DS.typography.metadata,
+    color: DS.colors.textGray,
+  },
+  priceLevel: {
+    ...DS.typography.metadata,
+    color: DS.colors.textGray,
+  },
+  restaurantDescription: {
+    ...DS.typography.body,
+    color: DS.colors.textGray,
+    lineHeight: 20,
+  },
+  saveButton: {
+    paddingHorizontal: DS.spacing.md,
+    paddingVertical: 6,
+    backgroundColor: DS.colors.textDark,
+    borderRadius: DS.borderRadius.full,
+  },
+  saveButtonText: {
+    ...DS.typography.caption,
+    color: DS.colors.textWhite,
+    fontWeight: '600',
+  },
+  
+  // Categories
+  categoriesSection: {
+    paddingBottom: DS.spacing.xxl,
+  },
+  categoriesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: DS.spacing.lg,
+    gap: DS.spacing.sm,
+  },
+  categoryChip: {
+    paddingHorizontal: DS.spacing.lg,
+    paddingVertical: DS.spacing.sm,
+    backgroundColor: DS.colors.surface,
+    borderRadius: DS.borderRadius.full,
+    borderWidth: 1,
+    borderColor: DS.colors.border,
+  },
+  categoryText: {
+    ...DS.typography.button,
+    color: DS.colors.textDark,
   },
 });

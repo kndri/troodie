@@ -1,6 +1,9 @@
 import * as Haptics from 'expo-haptics';
 import { boardService } from './boardService';
+import { restaurantService } from './restaurantService';
 import { ToastService } from './toastService';
+import { supabase } from '@/lib/supabase';
+import { RestaurantInfo } from '@/types/core';
 // import { Vibration } from 'react-native';
 
 export interface SaveState {
@@ -328,6 +331,54 @@ class SaveService {
     }
 
     throw lastError!;
+  }
+
+  /**
+   * Get all saved restaurants for a user
+   */
+  async getUserSaves(userId: string): Promise<RestaurantInfo[]> {
+    try {
+      // Get all user's boards
+      const boards = await boardService.getUserBoards(userId);
+      
+      // Collect all unique restaurant IDs
+      const restaurantIds = new Set<string>();
+      
+      for (const board of boards) {
+        const { data: boardRestaurants } = await supabase
+          .from('board_restaurants')
+          .select('restaurant_id')
+          .eq('board_id', board.id);
+        
+        if (boardRestaurants) {
+          boardRestaurants.forEach(br => restaurantIds.add(br.restaurant_id));
+        }
+      }
+
+      if (restaurantIds.size === 0) {
+        return [];
+      }
+
+      // Fetch restaurant details
+      const { data: restaurants, error } = await supabase
+        .from('restaurants')
+        .select('*')
+        .in('id', Array.from(restaurantIds));
+
+      if (error) throw error;
+
+      // Transform restaurants to ensure they have proper image URLs
+      const transformedRestaurants = (restaurants || []).map(restaurant => ({
+        ...restaurant,
+        image: restaurantService.getRestaurantImage(restaurant),
+        main_image: restaurant.main_image || restaurant.cover_photo_url || restaurantService.getRestaurantImage(restaurant)
+      }));
+
+      return transformedRestaurants;
+    } catch (error) {
+      console.error('Error fetching user saves:', error);
+      return [];
+    }
   }
 }
 

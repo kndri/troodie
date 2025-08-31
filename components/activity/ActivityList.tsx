@@ -122,7 +122,10 @@ export const ActivityList: React.FC<ActivityListProps> = memo(({
       onEndReached={onLoadMore}
       onEndReachedThreshold={0.5}
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={activities.length === 0 ? styles.emptyContent : undefined}
+      contentContainerStyle={[
+        styles.listContent,
+        activities.length === 0 && styles.emptyContent
+      ]}
       removeClippedSubviews={true}
       maxToRenderPerBatch={10}
       initialNumToRender={10}
@@ -148,6 +151,10 @@ const styles = StyleSheet.create({
   },
   emptyContent: {
     flexGrow: 1,
+  },
+  listContent: {
+    paddingTop: 8,
+    paddingBottom: 20,
   },
   errorText: {
     fontSize: 16,
