@@ -7,6 +7,7 @@ import { restaurantImageSyncService } from '@/services/restaurantImageSyncServic
 import { restaurantPhotosService } from '@/services/restaurantPhotosService';
 import { restaurantService } from '@/services/restaurantService';
 import { saveService } from '@/services/saveService';
+import ShareService from '@/services/shareService';
 import { FriendVisit, PowerUserReview, RecentActivity, socialActivityService } from '@/services/socialActivityService';
 import { ToastService } from '@/services/toastService';
 import { getErrorType } from '@/types/errors';
@@ -15,37 +16,37 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
-    ArrowLeft,
-    Award,
-    Bookmark,
-    Camera,
-    CheckCircle,
-    Clock,
-    ExternalLink,
-    Eye,
-    Globe,
-    MapPin,
-    MessageCircle,
-    Phone,
-    Share,
-    Star,
-    TrendingUp,
-    Users
+  ArrowLeft,
+  Award,
+  Bookmark,
+  Camera,
+  CheckCircle,
+  Clock,
+  ExternalLink,
+  Eye,
+  Globe,
+  MapPin,
+  Phone,
+  Share,
+  Star,
+  TrendingUp,
+  Users,
+  X
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Image,
-    Linking,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  Image,
+  Linking,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import ShareService from '@/services/shareService';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -80,6 +81,8 @@ export default function RestaurantDetailScreen() {
   const [restaurantPhotos, setRestaurantPhotos] = useState<any[]>([]);
   const [photosLoading, setPhotosLoading] = useState(false);
   const [updatingCover, setUpdatingCover] = useState(false);
+  const [photoViewerVisible, setPhotoViewerVisible] = useState(false);
+  const [photoViewerIndex, setPhotoViewerIndex] = useState(0);
 
   useEffect(() => {
     if (id) {
@@ -112,6 +115,25 @@ export default function RestaurantDetailScreen() {
       const data = await restaurantService.getRestaurantDetails(restaurantId);
       if (data) {
         setRestaurant(data);
+        
+        // Check if there are any posts/reviews and default to social tab if there are
+        if (user) {
+          const [friends, powerUsers, activity] = await Promise.all([
+            socialActivityService.getFriendsWhoVisited(restaurantId, user.id),
+            socialActivityService.getPowerUsersAndCritics(restaurantId),
+            socialActivityService.getRecentActivity(restaurantId),
+          ]);
+          
+          // If there's any social activity, open to social tab
+          if (friends.length > 0 || powerUsers.length > 0 || activity.length > 0) {
+            setActiveTab('social');
+          }
+          
+          // Set the social data we already loaded
+          setFriendsWhoVisited(friends);
+          setPowerUsersAndCritics(powerUsers);
+          setRecentActivity(activity);
+        }
         
         // If no cover photo, check if we can update it from existing photos
         if (!data.cover_photo_url) {
@@ -464,8 +486,9 @@ export default function RestaurantDetailScreen() {
         )}
       </TouchableOpacity>
       
-      <TouchableOpacity style={styles.actionButton} onPress={handleCreatePost}>
-        <MessageCircle size={18} color={designTokens.colors.textDark} />
+      <TouchableOpacity style={styles.reviewButton} onPress={handleCreatePost}>
+        <Star size={18} color={designTokens.colors.white} fill={designTokens.colors.white} />
+        <Text style={styles.reviewButtonText}>Review</Text>
       </TouchableOpacity>
     </View>
   );
@@ -610,8 +633,15 @@ export default function RestaurantDetailScreen() {
               )}
             </View>
             <View style={styles.photosGrid}>
-              {restaurantPhotos.map((photo) => (
-                <TouchableOpacity key={photo.id} style={styles.photoItem}>
+              {restaurantPhotos.map((photo, index) => (
+                <TouchableOpacity 
+                  key={photo.id} 
+                  style={styles.photoItem}
+                  onPress={() => {
+                    setPhotoViewerIndex(index);
+                    setPhotoViewerVisible(true);
+                  }}
+                >
                   <Image source={{ uri: photo.image_url }} style={styles.photo} />
                   {photo.user && (
                     <View style={styles.photoAttribution}>
@@ -737,19 +767,19 @@ export default function RestaurantDetailScreen() {
           )}
         </View>
 
-        {/* Power Users & Critics */}
-        <View style={[styles.socialCard, styles.powerUsersCard]}>
-          <View style={styles.socialHeader}>
-            <View style={styles.socialHeaderLeft}>
-              <Award size={16} color="#8B5CF6" />
-              <Text style={styles.socialTitle}>Power Users & Critics</Text>
+        {/* Power Users & Critics - Only show if there are any */}
+        {powerUsersAndCritics.length > 0 && (
+          <View style={[styles.socialCard, styles.powerUsersCard]}>
+            <View style={styles.socialHeader}>
+              <View style={styles.socialHeaderLeft}>
+                <Award size={16} color="#8B5CF6" />
+                <Text style={styles.socialTitle}>Power Users & Critics</Text>
+              </View>
+              <View style={[styles.badge, styles.purpleBadge]}>
+                <Text style={styles.badgeText}>{powerUsersAndCritics.length}</Text>
+              </View>
             </View>
-            <View style={[styles.badge, styles.purpleBadge]}>
-              <Text style={styles.badgeText}>{powerUsersAndCritics.length}</Text>
-            </View>
-          </View>
 
-          {powerUsersAndCritics.length > 0 ? (
             <View style={styles.socialList}>
               {powerUsersAndCritics.map((review) => (
                 <TouchableOpacity key={review.id} style={[styles.socialItem, styles.powerUserItem]}>
@@ -762,6 +792,11 @@ export default function RestaurantDetailScreen() {
                   <View style={styles.socialContent}>
                     <View style={styles.socialMetaRow}>
                       <Text style={styles.socialName}>{review.user.name}</Text>
+                      {review.user.persona && (
+                        <View style={styles.personaBadge}>
+                          <Text style={styles.personaText}>{review.user.persona}</Text>
+                        </View>
+                      )}
                       {renderStars(review.post.rating)}
                     </View>
                     <Text style={styles.socialComment}>{review.post.caption}</Text>
@@ -782,10 +817,8 @@ export default function RestaurantDetailScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-          ) : (
-            <Text style={styles.emptyStateText}>No reviews from power users yet.</Text>
-          )}
-        </View>
+          </View>
+        )}
 
         {/* Recent Activity */}
         <View style={styles.socialCard}>
@@ -1000,6 +1033,62 @@ export default function RestaurantDetailScreen() {
           }}
         />
       )}
+
+      {/* Photo Viewer Modal */}
+      <Modal
+        visible={photoViewerVisible}
+        transparent={false}
+        animationType="fade"
+        onRequestClose={() => setPhotoViewerVisible(false)}
+      >
+        <View style={styles.photoViewer}>
+          <TouchableOpacity 
+            style={styles.photoViewerClose}
+            onPress={() => setPhotoViewerVisible(false)}
+          >
+            <X size={24} color="white" />
+          </TouchableOpacity>
+          
+          <FlatList
+            data={restaurantPhotos}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            initialScrollIndex={photoViewerIndex}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <View style={styles.photoViewerItem}>
+                <Image 
+                  source={{ uri: item.image_url }} 
+                  style={styles.photoViewerImage}
+                  resizeMode="contain"
+                />
+                {item.caption && (
+                  <View style={styles.photoViewerCaption}>
+                    <Text style={styles.photoViewerCaptionText}>{item.caption}</Text>
+                  </View>
+                )}
+                {item.user && (
+                  <View style={styles.photoViewerAttribution}>
+                    <Image 
+                      source={{ uri: item.user.avatar_url || 'https://i.pravatar.cc/150' }} 
+                      style={styles.photoViewerUserAvatar} 
+                    />
+                    <Text style={styles.photoViewerUserName}>
+                      {item.user.name || item.user.username || 'Anonymous'}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+            getItemLayout={(data, index) => ({
+              length: screenWidth,
+              offset: screenWidth * index,
+              index,
+            })}
+          />
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1182,6 +1271,21 @@ const styles = StyleSheet.create({
     ...designTokens.typography.detailText,
     fontFamily: 'Inter_500Medium',
     color: designTokens.colors.textDark,
+  },
+  reviewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: designTokens.colors.primaryOrange,
+    borderRadius: designTokens.borderRadius.md,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  reviewButtonText: {
+    ...designTokens.typography.detailText,
+    fontFamily: 'Inter_600SemiBold',
+    color: designTokens.colors.white,
   },
   reserveButton: {
     backgroundColor: designTokens.colors.primaryOrange,
@@ -1559,6 +1663,18 @@ const styles = StyleSheet.create({
     color: '#1E40AF',
     fontSize: 10,
   },
+  personaBadge: {
+    backgroundColor: '#F0F9FF',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: designTokens.borderRadius.sm,
+  },
+  personaText: {
+    ...designTokens.typography.smallText,
+    fontFamily: 'Inter_500Medium',
+    color: '#0369A1',
+    fontSize: 10,
+  },
   socialComment: {
     ...designTokens.typography.smallText,
     color: designTokens.colors.textMedium,
@@ -1696,5 +1812,69 @@ const styles = StyleSheet.create({
   },
   greenBadge: {
     backgroundColor: '#D1FAE5',
+  },
+  
+  // Photo Viewer Styles
+  photoViewer: {
+    flex: 1,
+    backgroundColor: 'black',
+    justifyContent: 'center',
+  },
+  photoViewerClose: {
+    position: 'absolute',
+    top: 60,
+    right: 20,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoViewerItem: {
+    width: screenWidth,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoViewerImage: {
+    width: screenWidth,
+    height: screenWidth,
+  },
+  photoViewerCaption: {
+    position: 'absolute',
+    bottom: 80,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    padding: 12,
+    borderRadius: 8,
+  },
+  photoViewerCaptionText: {
+    color: 'white',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  photoViewerAttribution: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  photoViewerUserAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginRight: 8,
+  },
+  photoViewerUserName: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '500',
   },
 });

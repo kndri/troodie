@@ -660,7 +660,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   profileAvatar: {
-    marginRight: DS.spacing.xs,
+    marginRight: DS.spacing.md,
   },
   searchBar: {
     flex: 1,

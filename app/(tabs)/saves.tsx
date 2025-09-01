@@ -417,6 +417,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: DS.colors.borderLight,
   },
+  profileAvatar: {
+    marginRight: DS.spacing.md,
+  },
   title: {
     ...DS.typography.h1,
     color: DS.colors.textDark,

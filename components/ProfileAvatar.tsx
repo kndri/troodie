@@ -17,7 +17,7 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
   style 
 }) => {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, profile } = useAuth();
 
   const handlePress = () => {
     if (onPress) {
@@ -40,21 +40,25 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
     );
   }
 
+  // Get avatar URL from profile or user object
+  const avatarUrl = profile?.avatar_url || user?.avatar_url;
+  const displayName = profile?.name || user?.name || user?.email;
+
   return (
     <TouchableOpacity 
       style={[styles.container, { width: size, height: size }, style]}
       onPress={handlePress}
       activeOpacity={0.7}
     >
-      {user.avatar_url ? (
+      {avatarUrl ? (
         <Image 
-          source={{ uri: user.avatar_url }} 
+          source={{ uri: avatarUrl }} 
           style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }]}
         />
       ) : (
         <View style={[styles.placeholder, { width: size, height: size, borderRadius: size / 2 }]}>
           <Text style={[styles.placeholderText, { fontSize: size * 0.4 }]}>
-            {user.name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || '?'}
+            {displayName?.charAt(0)?.toUpperCase() || '?'}
           </Text>
         </View>
       )}

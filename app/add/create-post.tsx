@@ -32,6 +32,7 @@ import { AddRestaurantModal } from '@/components/AddRestaurantModal';
 import { CommunitySelector } from '@/components/CommunitySelector';
 import { LinkInputModal } from '@/components/modals/LinkInputModal';
 import { linkMetadataService } from '@/services/linkMetadataService';
+import { ToastService } from '@/services/toastService';
 import { Users } from 'lucide-react-native';
 
 type ContentType = 'original' | 'external';
@@ -58,7 +59,6 @@ export default function CreatePostScreen() {
   
   // Core state
   const [loading, setLoading] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
   const [showAttachments, setShowAttachments] = useState(false);
   const [activeAttachment, setActiveAttachment] = useState<AttachmentType | null>(null);
   
@@ -250,16 +250,19 @@ export default function CreatePostScreen() {
         // Update network progress
         await updateNetworkProgress('post');
 
-        // Show success state
-        setShowSuccess(true);
+        // Show success toast and navigate back
+        ToastService.showSuccess('Post published successfully!', {
+          label: 'View',
+          onPress: () => {
+            router.push({
+              pathname: '/posts/[id]',
+              params: { id: post.id }
+            });
+          }
+        });
         
-        // Navigate to success page after delay
-        setTimeout(() => {
-          router.replace({
-            pathname: '/add/post-success',
-            params: { id: post.id }
-          });
-        }, 1500);
+        // Navigate back to previous screen (restaurant detail or home)
+        router.back();
       }
 
     } catch (error) {
@@ -627,19 +630,6 @@ export default function CreatePostScreen() {
     </View>
   );
 
-  const renderSuccessOverlay = () => {
-    if (!showSuccess) return null;
-    
-    return (
-      <View style={styles.successOverlay}>
-        <View style={styles.successContainer}>
-          <Ionicons name="checkmark-circle" size={60} color={designTokens.colors.success} />
-          <Text style={styles.successTitle}>Posted Successfully!</Text>
-          <Text style={styles.successMessage}>Your experience has been shared with the community</Text>
-        </View>
-      </View>
-    );
-  };
 
   const renderRatingSheet = () => (
     <Modal
@@ -996,7 +986,6 @@ export default function CreatePostScreen() {
         {renderRestaurantModal()}
         {renderPostTypeInfoModal()}
         {renderContentTypeInfoModal()}
-        {renderSuccessOverlay()}
         
         <AddRestaurantModal
           visible={showAddRestaurantModal}
@@ -1958,40 +1947,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter_600SemiBold',
     color: designTokens.colors.white,
-  },
-
-  // Success overlay
-  successOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-  },
-  successContainer: {
-    backgroundColor: designTokens.colors.white,
-    borderRadius: designTokens.borderRadius.lg,
-    padding: designTokens.spacing.xl,
-    alignItems: 'center',
-    marginHorizontal: designTokens.spacing.xl,
-  },
-  successTitle: {
-    fontSize: 20,
-    fontFamily: 'Inter_600SemiBold',
-    color: designTokens.colors.textDark,
-    marginTop: designTokens.spacing.md,
-    marginBottom: designTokens.spacing.sm,
-  },
-  successMessage: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    color: designTokens.colors.textMedium,
-    textAlign: 'center',
-    lineHeight: 20,
   },
   keyboardAccessoryBar: {
     flexDirection: 'row',
