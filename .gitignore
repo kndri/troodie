@@ -34,6 +34,10 @@ yarn-error.*
 .env
 .env*.local
 
+# Allow specific environment files for different build profiles
+!.env.development
+!.env.production
+
 # typescript
 *.tsbuildinfo
 

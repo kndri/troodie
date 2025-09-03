@@ -1,5 +1,24 @@
 import 'dotenv/config';
 
+// Determine which environment file to load
+const getBuildProfile = () => {
+  // EAS_BUILD_PROFILE is set automatically by EAS during builds
+  const profile = process.env.EAS_BUILD_PROFILE;
+  
+  if (profile === 'production') {
+    // Load production environment variables
+    require('dotenv').config({ path: '.env.production' });
+  } else {
+    // Default to development for local builds and dev profile
+    require('dotenv').config({ path: '.env.development' });
+  }
+  
+  return profile || 'development';
+};
+
+// Load the appropriate environment
+const currentProfile = getBuildProfile();
+
 export default {
   expo: {
     name: "Troodie",
@@ -52,6 +71,7 @@ export default {
       supabaseUrl: process.env.SUPABASE_URL,
       supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
       googlePlacesApiKey: process.env.GOOGLE_MAPS_API_KEY,
+      buildProfile: currentProfile,
       eas: {
         projectId: "68397d45-255f-4b4c-ba93-d51a044ddfb2"
       }
