@@ -4,56 +4,50 @@
  * Focus on real user data and actionable insights
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  RefreshControl,
-  ActivityIndicator,
-  Dimensions,
-  Platform,
-} from 'react-native';
-import {
-  Settings,
-  Edit3,
-  MapPin,
-  Calendar,
-  TrendingUp,
-  Award,
-  Users,
-  Bookmark,
-  Heart,
-  MessageSquare,
-  Share2,
-  Instagram,
-  ChevronRight,
-  Plus,
-  Grid3X3,
-  List,
-  Map,
-  BarChart3,
-  Star,
-} from 'lucide-react-native';
-import { DS } from '@/components/design-system/tokens';
 import { AuthGate } from '@/components/AuthGate';
 import { BoardCollageCard } from '@/components/BoardCollageCard';
+import { DS } from '@/components/design-system/tokens';
 import { EditProfileModal } from '@/components/modals/EditProfileModal';
 import SettingsModal from '@/components/modals/SettingsModal';
-import { useAuth } from '@/contexts/AuthContext';
 import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { boardService } from '@/services/boardService';
 import { postService } from '@/services/postService';
 import { profileService } from '@/services/profileService';
 import ShareService from '@/services/shareService';
-import { getAvatarUrlWithFallback } from '@/utils/avatarUtils';
-import { useRouter } from 'expo-router';
 import { Board } from '@/types/board';
 import { PostWithUser } from '@/types/post';
+import { getAvatarUrlWithFallback } from '@/utils/avatarUtils';
+import { useRouter } from 'expo-router';
+import {
+  Bookmark,
+  Calendar,
+  ChevronRight,
+  Edit3,
+  Grid3X3,
+  Instagram,
+  List,
+  MapPin,
+  MessageSquare,
+  Plus,
+  Settings,
+  Share2,
+  Star,
+  Users
+} from 'lucide-react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Dimensions,
+  Image,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - DS.spacing.lg * 2 - DS.spacing.md) / 2;
@@ -176,7 +170,7 @@ export default function ProfileScreen() {
   // Render stat card
   const StatCard = ({ icon: Icon, value, label, color = DS.colors.textDark }: any) => (
     <View style={styles.statCard}>
-      <Icon size={20} color={color} />
+      <Icon size={16} color={color} />
       <Text style={[styles.statValue, { color }]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
@@ -251,60 +245,63 @@ export default function ProfileScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => setShowEditModal(true)}>
-            <Edit3 size={24} color={DS.colors.textDark} />
+            <Edit3 size={20} color={DS.colors.textDark} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Profile</Text>
           <TouchableOpacity onPress={() => setShowSettingsModal(true)}>
-            <Settings size={24} color={DS.colors.textDark} />
+            <Settings size={20} color={DS.colors.textDark} />
           </TouchableOpacity>
         </View>
 
-        {/* Profile Info */}
+        {/* Compact Profile Info */}
         <View style={styles.profileSection}>
-          <TouchableOpacity onPress={() => setShowEditModal(true)}>
-            <Image
-              source={{ uri: getAvatarUrlWithFallback(profile?.avatar_url) }}
-              style={styles.avatar}
-            />
-          </TouchableOpacity>
-          
-          <Text style={styles.displayName}>
-            {profile?.display_name || profile?.username || 'Foodie'}
-          </Text>
-          <Text style={styles.username}>@{profile?.username || 'username'}</Text>
-          
-          {profile?.bio && (
-            <Text style={styles.bio} numberOfLines={2}>
-              {profile.bio}
-            </Text>
-          )}
-
-          <View style={styles.profileMeta}>
-            {profile?.city && (
-              <View style={styles.metaItem}>
-                <MapPin size={14} color={DS.colors.textGray} />
-                <Text style={styles.metaText}>{profile.city}</Text>
-              </View>
-            )}
-            <View style={styles.metaItem}>
-              <Calendar size={14} color={DS.colors.textGray} />
-              <Text style={styles.metaText}>
-                Joined {new Date(profile?.created_at || Date.now()).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-              </Text>
-            </View>
-          </View>
-
-          {/* Action Buttons */}
-          <View style={styles.actionButtons}>
-            <TouchableOpacity style={styles.primaryButton} onPress={handleShare}>
-              <Share2 size={18} color={DS.colors.textWhite} />
-              <Text style={styles.primaryButtonText}>Share Profile</Text>
+          <View style={styles.profileRow}>
+            <TouchableOpacity onPress={() => setShowEditModal(true)}>
+              <Image
+                source={{ uri: getAvatarUrlWithFallback(profile?.avatar_url) }}
+                style={styles.avatar}
+              />
             </TouchableOpacity>
-            {profile?.instagram_username && (
-              <TouchableOpacity style={styles.secondaryButton}>
-                <Instagram size={18} color={DS.colors.textDark} />
+
+            <View style={styles.profileInfo}>
+              <View style={styles.nameRow}>
+                <Text style={styles.displayName}>
+                  {profile?.display_name || profile?.username || 'Foodie'}
+                </Text>
+                <Text style={styles.username}>@{profile?.username || 'username'}</Text>
+              </View>
+
+              {profile?.bio && (
+                <Text style={styles.bio} numberOfLines={1}>
+                  {profile.bio}
+                </Text>
+              )}
+
+              <View style={styles.profileMeta}>
+                {profile?.city && (
+                  <View style={styles.metaItem}>
+                    <MapPin size={12} color={DS.colors.textGray} />
+                    <Text style={styles.metaText}>{profile.city}</Text>
+                  </View>
+                )}
+                <View style={styles.metaItem}>
+                  <Calendar size={12} color={DS.colors.textGray} />
+                  <Text style={styles.metaText}>
+                    {new Date(profile?.created_at || Date.now()).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.actionButtonsCompact}>
+              <TouchableOpacity style={styles.compactButton} onPress={handleShare}>
+                <Share2 size={18} color={DS.colors.textDark} />
               </TouchableOpacity>
-            )}
+              {profile?.instagram_username && (
+                <TouchableOpacity style={styles.compactButton}>
+                  <Instagram size={18} color={DS.colors.textDark} />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         </View>
 
@@ -504,40 +501,51 @@ const styles = StyleSheet.create({
     color: DS.colors.textDark,
   },
   profileSection: {
-    alignItems: 'center',
-    paddingVertical: DS.spacing.xl,
+    paddingVertical: DS.spacing.md,
     paddingHorizontal: DS.spacing.lg,
     backgroundColor: DS.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: DS.colors.borderLight,
+  },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DS.spacing.md,
+  },
+  profileInfo: {
+    flex: 1,
+    gap: DS.spacing.xs,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: DS.spacing.sm,
   },
   avatar: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    marginBottom: DS.spacing.md,
-    borderWidth: 3,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
     borderColor: DS.colors.primaryOrange,
   },
   displayName: {
-    ...DS.typography.h2,
+    ...DS.typography.h3,
     color: DS.colors.textDark,
-    marginBottom: DS.spacing.xs,
+    fontWeight: '600',
   },
   username: {
-    ...DS.typography.body,
+    ...DS.typography.metadata,
     color: DS.colors.textGray,
-    marginBottom: DS.spacing.sm,
   },
   bio: {
-    ...DS.typography.body,
+    ...DS.typography.caption,
     color: DS.colors.textDark,
-    textAlign: 'center',
-    marginBottom: DS.spacing.md,
-    paddingHorizontal: DS.spacing.xl,
+    marginTop: 2,
   },
   profileMeta: {
     flexDirection: 'row',
-    gap: DS.spacing.lg,
-    marginBottom: DS.spacing.lg,
+    gap: DS.spacing.md,
+    marginTop: 2,
   },
   metaItem: {
     flexDirection: 'row',
@@ -545,12 +553,27 @@ const styles = StyleSheet.create({
     gap: DS.spacing.xs,
   },
   metaText: {
-    ...DS.typography.metadata,
+    ...DS.typography.caption,
     color: DS.colors.textGray,
+    fontSize: 11,
   },
   actionButtons: {
     flexDirection: 'row',
     gap: DS.spacing.sm,
+  },
+  actionButtonsCompact: {
+    flexDirection: 'row',
+    gap: DS.spacing.xs,
+  },
+  compactButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: DS.colors.surfaceLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: DS.colors.borderLight,
   },
   primaryButton: {
     flexDirection: 'row',
@@ -575,28 +598,29 @@ const styles = StyleSheet.create({
   },
   statsContainer: {
     backgroundColor: DS.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: DS.colors.borderLight,
   },
   statsContent: {
     paddingHorizontal: DS.spacing.lg,
-    paddingVertical: DS.spacing.md,
+    paddingVertical: DS.spacing.sm,
     gap: DS.spacing.md,
   },
   statCard: {
     alignItems: 'center',
-    paddingHorizontal: DS.spacing.md,
-    minWidth: 70,
+    paddingHorizontal: DS.spacing.sm,
+    minWidth: 60,
   },
   statValue: {
-    ...DS.typography.h3,
+    ...DS.typography.button,
+    fontSize: 16,
+    fontWeight: '600',
     color: DS.colors.textDark,
-    marginTop: DS.spacing.xs,
+    marginTop: 4,
   },
   statLabel: {
     ...DS.typography.caption,
+    fontSize: 11,
     color: DS.colors.textGray,
-    marginTop: 2,
+    marginTop: 1,
   },
   tasteProfile: {
     padding: DS.spacing.lg,

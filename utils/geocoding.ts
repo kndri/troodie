@@ -9,41 +9,78 @@ export interface Coordinates {
   longitude: number;
 }
 
+// Simple in-memory cache for geocoding results
+const geocodeCache = new Map<string, Coordinates>();
+
+// Rate limiting configuration
+const RATE_LIMIT_DELAY = 500; // ms between requests
+let lastGeocodingTime = 0;
+
 /**
- * Geocode an address to get coordinates
+ * Geocode an address to get coordinates with caching and rate limiting
  * @param address The address string to geocode
  * @returns Coordinates or null if geocoding fails
  */
 export async function geocodeAddress(address: string): Promise<Coordinates | null> {
   try {
     if (!address) return null;
-    
+
+    // Check cache first
+    const cached = geocodeCache.get(address);
+    if (cached) {
+      return cached;
+    }
+
+    // Rate limiting: ensure minimum delay between API calls
+    const now = Date.now();
+    const timeSinceLastRequest = now - lastGeocodingTime;
+    if (timeSinceLastRequest < RATE_LIMIT_DELAY) {
+      await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY - timeSinceLastRequest));
+    }
+    lastGeocodingTime = Date.now();
+
     // Use Expo Location geocoding
     const geocoded = await Location.geocodeAsync(address);
-    
+
     if (geocoded && geocoded.length > 0) {
-      return {
+      const coordinates = {
         latitude: geocoded[0].latitude,
         longitude: geocoded[0].longitude,
       };
+
+      // Cache the result
+      geocodeCache.set(address, coordinates);
+
+      return coordinates;
     }
-    
+
     return null;
-  } catch (error) {
+  } catch (error: any) {
+    // Check if it's a rate limit error
+    if (error?.message?.includes('rate limit')) {
+      console.warn('Geocoding rate limit hit, returning null for:', address);
+      // Return null instead of throwing to prevent app crashes
+      return null;
+    }
     console.error('Geocoding error for address:', address, error);
     return null;
   }
 }
 
 /**
- * Batch geocode multiple addresses
+ * Batch geocode multiple addresses with rate limiting
  * @param addresses Array of address strings
  * @returns Array of coordinates (null for failed geocoding)
  */
 export async function batchGeocodeAddresses(addresses: string[]): Promise<(Coordinates | null)[]> {
-  const results = await Promise.all(
-    addresses.map(address => geocodeAddress(address))
-  );
+  const results: (Coordinates | null)[] = [];
+
+  // Process sequentially to respect rate limits
+  for (const address of addresses) {
+    const coords = await geocodeAddress(address);
+    results.push(coords);
+  }
+
   return results;
 }
 

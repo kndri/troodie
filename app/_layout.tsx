@@ -13,6 +13,7 @@ import {
 import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import * as Linking from 'expo-linking';
+import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
@@ -183,12 +184,16 @@ function InnerLayout() {
             <Stack.Screen name="add" options={{ headerShown: false }} />
             <Stack.Screen name="restaurant/[id]" options={{ headerShown: false }} />
             <Stack.Screen name="boards/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="boards/manage" options={{ headerShown: false }} />
+
             <Stack.Screen name="posts/[id]" options={{ headerShown: false }} />
             <Stack.Screen name="user/[id]" options={{ headerShown: false }} />
             <Stack.Screen name="find-friends" options={{ headerShown: false }} />
             <Stack.Screen name="user/[id]/following" options={{ headerShown: false }} />
             <Stack.Screen name="user/[id]/followers" options={{ headerShown: false }} />
             <Stack.Screen name="settings/blocked-users" options={{ headerShown: false }} />
+            <Stack.Screen name="search" options={{ headerShown: false }} />
+            <Stack.Screen name="demo" options={{ headerShown: false }} />
             <Stack.Screen name="+not-found" />
           </Stack>
           <StatusBar style="dark" />

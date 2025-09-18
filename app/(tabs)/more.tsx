@@ -75,6 +75,16 @@ export default function MoreScreen() {
   // Discover & Social Section
   const discoverItems: MenuItem[] = [
     {
+      id: 'demo',
+      title: '🚀 Demo: Future Features',
+      subtitle: 'Preview what\'s coming next',
+      icon: TrendingUp,
+      iconColor: '#8B5CF6',
+      action: () => router.push('/demo'),
+      showBadge: true,
+      badgeCount: 9,
+    },
+    {
       id: 'activity',
       title: 'Activity',
       subtitle: 'See what your friends are up to',
@@ -98,7 +108,7 @@ export default function MoreScreen() {
       subtitle: 'Discover what\'s popular',
       icon: TrendingUp,
       iconColor: '#FF6B6B',
-      action: () => router.push('/discover-gems'),
+      action: () => router.push('/trending'),
     },
     {
       id: 'invite-friends',
@@ -106,7 +116,7 @@ export default function MoreScreen() {
       subtitle: 'Grow your network',
       icon: UserPlus,
       iconColor: '#5B8DEE',
-      action: () => router.push('/friends/invite'),
+      action: () => router.push('/invite-friends'),
     },
   ];
 
@@ -223,7 +233,7 @@ export default function MoreScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* User Profile Card */}
         {isAuthenticated && user && (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.profileCard}
             onPress={() => router.push('/(tabs)/profile')}
             activeOpacity={0.8}
@@ -241,10 +251,10 @@ export default function MoreScreen() {
               <View style={styles.profileText}>
                 <Text style={styles.profileName}>{user.name || 'User'}</Text>
                 <Text style={styles.profileEmail}>{user.email}</Text>
-                <TouchableOpacity style={styles.viewProfileButton}>
+                <View style={styles.viewProfileButton}>
                   <Text style={styles.viewProfileText}>View Profile</Text>
                   <ChevronRight size={14} color={DS.colors.primaryOrange} />
-                </TouchableOpacity>
+                </View>
               </View>
             </View>
           </TouchableOpacity>

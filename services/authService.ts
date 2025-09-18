@@ -29,6 +29,22 @@ export const authService = {
           messageId: null,
         }
       }
+
+      // Test accounts bypass - multiple test users
+      const testAccounts = [
+        'test.foodie@troodieapp.com',
+        'test.owner@troodieapp.com',
+        'test.critic@troodieapp.com',
+        'test.newuser@troodieapp.com'
+      ]
+
+      if (testAccounts.includes(email.toLowerCase())) {
+        console.log('[AuthService] Test account detected:', email)
+        return {
+          success: true,
+          messageId: null,
+        }
+      }
       
       // Use signInWithOtp which will create the user automatically
       // Don't check users table first as it might not have the profile yet
@@ -96,6 +112,22 @@ export const authService = {
           messageId: null,
         }
       }
+
+      // Test accounts bypass
+      const testAccounts = [
+        'test.foodie@troodieapp.com',
+        'test.owner@troodieapp.com',
+        'test.critic@troodieapp.com',
+        'test.newuser@troodieapp.com'
+      ]
+
+      if (testAccounts.includes(email.toLowerCase())) {
+        console.log('[AuthService] Test account detected for sign-in:', email)
+        return {
+          success: true,
+          messageId: null,
+        }
+      }
       
       // Use signInWithOtp with shouldCreateUser: false for login
       const { data, error } = await supabase.auth.signInWithOtp({
@@ -151,7 +183,66 @@ export const authService = {
    */
   async verifyOtp(email: string, token: string): Promise<AuthResponse> {
     try {
-      // Special handling for App Store Review account with password auth
+      // Test accounts that bypass OTP verification
+      const testAccounts = [
+        'test.foodie@troodieapp.com',
+        'test.owner@troodieapp.com',
+        'test.critic@troodieapp.com',
+        'test.newuser@troodieapp.com'
+      ]
+
+      // Check if this is a test account with OTP 000000
+      if (testAccounts.includes(email.toLowerCase()) && token === '000000') {
+        console.log('[AuthService] Test account detected, bypassing OTP:', email)
+
+        // For test accounts in development, we create a mock session
+        // This approach works without needing actual OTP or passwords
+
+        // First verify the test user exists in the database
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', email.toLowerCase())
+          .single()
+
+        if (userError || !userData) {
+          console.error('[AuthService] Test user not found:', userError)
+          return {
+            success: false,
+            error: 'Test account not found. Please run create-test-accounts.sql first.'
+          }
+        }
+
+        // Since we can't create a real Supabase session without actual auth,
+        // we'll create a mock session that the app can recognize
+        // In development/test mode, the app should handle this appropriately
+
+        const mockSession = {
+          access_token: 'test-token-' + userData.id,
+          refresh_token: 'test-refresh-' + userData.id,
+          expires_in: 3600,
+          token_type: 'bearer',
+          user: {
+            id: userData.id,
+            email: userData.email,
+            app_metadata: {},
+            user_metadata: { is_test_account: true },
+            aud: 'authenticated',
+            created_at: userData.created_at
+          }
+        } as any
+
+        console.log('[AuthService] Test account mock session created:', email)
+
+        // Return success with mock session
+        // The AuthContext will handle this appropriately
+        return {
+          success: true,
+          session: mockSession
+        }
+      }
+
+      // Special handling for App Store Review account - keep existing logic
       if (email.toLowerCase() === 'review@troodieapp.com' && token === '000000') {
         console.log('[AuthService] App Review account detected, using password authentication')
         

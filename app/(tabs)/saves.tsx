@@ -164,61 +164,120 @@ export default function SavesScreen() {
   if (userState === 'first') {
     return (
       <SafeAreaView style={styles.container}>
-        <ScrollView 
+        <View style={styles.header}>
+          <ProfileAvatar size={36} style={styles.profileAvatar} />
+          <Text style={styles.title}>Your Saves</Text>
+          <TouchableOpacity onPress={() => router.push('/add/create-board')}>
+            <Plus size={24} color={DS.colors.primaryOrange} />
+          </TouchableOpacity>
+        </View>
+        <ScrollView
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
           }
         >
-          <View style={styles.header}>
-            <Text style={styles.title}>Your Saves</Text>
-          </View>
 
-          <View style={styles.celebrationCard}>
-            <Text style={styles.celebrationEmoji}>🎉</Text>
-            <Text style={styles.celebrationText}>
-              You saved your first {totalSaves === 1 ? 'place' : `${totalSaves} places`}!
-            </Text>
-          </View>
-
-          <View style={styles.section}>
-            <View style={styles.allSavesCard}>
-              <Text style={styles.allSavesTitle}>All Saves ({totalSaves})</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={styles.savedRestaurants}>
-                  {saves.slice(0, 3).map((restaurant) => (
-                    <TouchableOpacity 
-                      key={restaurant.id} 
-                      style={styles.miniCard}
-                      onPress={() => router.push(`/restaurant/${restaurant.id}`)}
-                    >
-                      {(restaurant.main_image || restaurant.image) ? (
-                        <Image source={{ uri: restaurant.main_image || restaurant.image }} style={styles.miniCardImage} />
-                      ) : (
-                        <View style={[styles.miniCardImage, styles.miniCardImagePlaceholder]}>
-                          <Text style={styles.miniCardEmoji}>🍽️</Text>
-                        </View>
-                      )}
-                      <Text style={styles.miniCardName} numberOfLines={1}>
-                        {restaurant.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
+          <View style={styles.progressSection}>
+            <View style={styles.progressHeader}>
+              <Text style={styles.progressTitle}>Building Your Collection</Text>
+              <Text style={styles.progressSubtitle}>
+                {totalSaves} of 5 saves to unlock boards
+              </Text>
+            </View>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${(totalSaves / 5) * 100}%` }]} />
+            </View>
+            <View style={styles.progressMilestones}>
+              <View style={styles.milestone}>
+                <View style={[styles.milestoneCircle, totalSaves >= 1 && styles.milestoneActive]} />
+                <Text style={styles.milestoneText}>First Save</Text>
+              </View>
+              <View style={styles.milestone}>
+                <View style={[styles.milestoneCircle, totalSaves >= 3 && styles.milestoneActive]} />
+                <Text style={styles.milestoneText}>Getting Started</Text>
+              </View>
+              <View style={styles.milestone}>
+                <View style={[styles.milestoneCircle, totalSaves >= 5 && styles.milestoneActive]} />
+                <Text style={styles.milestoneText}>Boards Unlocked!</Text>
+              </View>
             </View>
           </View>
 
-          <View style={styles.tipCard}>
-            <Text style={styles.tipEmoji}>💡</Text>
-            <Text style={styles.tipText}>
-              Tip: Create boards to organize your favorites by occasion
-            </Text>
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Your Saved Places</Text>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/explore')}>
+                <Text style={styles.addMoreText}>+ Add More</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.savedGrid}>
+              {saves.map((restaurant) => (
+                <TouchableOpacity
+                  key={restaurant.id}
+                  style={styles.savedCard}
+                  onPress={() => router.push(`/restaurant/${restaurant.id}`)}
+                >
+                  {(restaurant.main_image || restaurant.image) ? (
+                    <Image source={{ uri: restaurant.main_image || restaurant.image }} style={styles.savedCardImage} />
+                  ) : (
+                    <View style={[styles.savedCardImage, styles.savedCardImagePlaceholder]}>
+                      <Text style={styles.savedCardEmoji}>🍽️</Text>
+                    </View>
+                  )}
+                  <View style={styles.savedCardInfo}>
+                    <Text style={styles.savedCardName} numberOfLines={1}>
+                      {restaurant.name}
+                    </Text>
+                    <Text style={styles.savedCardMeta} numberOfLines={1}>
+                      {restaurant.cuisine_type} • {restaurant.city}
+                    </Text>
+                    {restaurant.google_rating && (
+                      <View style={styles.savedCardRating}>
+                        <Text style={styles.savedCardStar}>⭐</Text>
+                        <Text style={styles.savedCardRatingText}>{restaurant.google_rating}</Text>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+
+              {/* Add placeholder cards to fill grid */}
+              {Array.from({ length: Math.max(0, 4 - saves.length) }).map((_, index) => (
+                <TouchableOpacity
+                  key={`empty-${index}`}
+                  style={styles.emptyCard}
+                  onPress={() => router.push('/(tabs)/explore')}
+                >
+                  <View style={styles.emptyCardContent}>
+                    <Plus size={24} color={DS.colors.textGray} />
+                    <Text style={styles.emptyCardText}>Add Place</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
 
-          <TouchableOpacity style={styles.createBoardButton} onPress={handleCreateBoard}>
-            <Plus size={20} color={DS.colors.primaryOrange} />
-            <Text style={styles.createBoardText}>Create Your First Board</Text>
-          </TouchableOpacity>
+          <View style={styles.unlockSection}>
+            <View style={styles.unlockCard}>
+              <View style={styles.unlockIcon}>
+                <Sparkles size={24} color={DS.colors.primaryOrange} />
+              </View>
+              <View style={styles.unlockContent}>
+                <Text style={styles.unlockTitle}>Unlock Boards at 5 Saves!</Text>
+                <Text style={styles.unlockDescription}>
+                  {5 - totalSaves} more save{5 - totalSaves !== 1 ? 's' : ''} to organize your collection
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.discoverSection}>
+            <Text style={styles.discoverTitle}>Keep Exploring</Text>
+            <TouchableOpacity style={styles.exploreButton} onPress={() => router.push('/(tabs)/explore')}>
+              <Text style={styles.exploreButtonText}>Discover More Restaurants</Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </SafeAreaView>
     );
@@ -506,96 +565,207 @@ const styles = StyleSheet.create({
     color: DS.colors.textGray,
   },
 
-  // First saves state
-  celebrationCard: {
-    backgroundColor: DS.colors.surfaceLight,
-    margin: DS.spacing.lg,
-    padding: DS.spacing.lg,
-    borderRadius: DS.borderRadius.lg,
-    alignItems: 'center',
-  },
-  celebrationEmoji: {
-    fontSize: 32,
-    marginBottom: DS.spacing.sm,
-  },
-  celebrationText: {
-    ...DS.typography.h3,
-    color: DS.colors.textDark,
-  },
-  section: {
-    paddingHorizontal: DS.spacing.lg,
-  },
-  allSavesCard: {
+  // First saves state - Improved
+  progressSection: {
     backgroundColor: DS.colors.surface,
+    margin: DS.spacing.lg,
     padding: DS.spacing.lg,
     borderRadius: DS.borderRadius.lg,
     ...DS.shadows.sm,
   },
-  allSavesTitle: {
-    ...DS.typography.h3,
+  progressHeader: {
+    marginBottom: DS.spacing.lg,
+  },
+  progressTitle: {
+    ...DS.typography.h2,
     color: DS.colors.textDark,
-    marginBottom: DS.spacing.md,
-  },
-  savedRestaurants: {
-    flexDirection: 'row',
-    gap: DS.spacing.md,
-  },
-  miniCard: {
-    width: 100,
-  },
-  miniCardImage: {
-    width: 100,
-    height: 75,
-    borderRadius: DS.borderRadius.md,
     marginBottom: DS.spacing.xs,
   },
-  miniCardName: {
+  progressSubtitle: {
+    ...DS.typography.body,
+    color: DS.colors.textGray,
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: DS.colors.backgroundLight,
+    borderRadius: DS.borderRadius.full,
+    overflow: 'hidden',
+    marginBottom: DS.spacing.lg,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: DS.colors.primaryOrange,
+    borderRadius: DS.borderRadius.full,
+  },
+  progressMilestones: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  milestone: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  milestoneCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: DS.colors.backgroundLight,
+    borderWidth: 2,
+    borderColor: DS.colors.border,
+    marginBottom: DS.spacing.xs,
+  },
+  milestoneActive: {
+    backgroundColor: DS.colors.primaryOrange,
+    borderColor: DS.colors.primaryOrange,
+  },
+  milestoneText: {
     ...DS.typography.metadata,
+    color: DS.colors.textGray,
+    fontSize: 11,
+    textAlign: 'center',
+  },
+  section: {
+    paddingHorizontal: DS.spacing.lg,
+    marginBottom: DS.spacing.lg,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: DS.spacing.md,
+  },
+  sectionTitle: {
+    ...DS.typography.h2,
     color: DS.colors.textDark,
   },
-  miniCardImagePlaceholder: {
+  addMoreText: {
+    ...DS.typography.button,
+    color: DS.colors.primaryOrange,
+    fontSize: 14,
+  },
+  savedGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: DS.spacing.md,
+  },
+  savedCard: {
+    width: (SCREEN_WIDTH - DS.spacing.lg * 2 - DS.spacing.md) / 2,
+    backgroundColor: DS.colors.surface,
+    borderRadius: DS.borderRadius.lg,
+    overflow: 'hidden',
+    ...DS.shadows.sm,
+  },
+  savedCardImage: {
+    width: '100%',
+    height: 120,
+  },
+  savedCardImagePlaceholder: {
     backgroundColor: DS.colors.backgroundLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  miniCardEmoji: {
-    fontSize: 20,
-    opacity: 0.5,
+  savedCardEmoji: {
+    fontSize: 32,
+    opacity: 0.3,
   },
-  tipCard: {
+  savedCardInfo: {
+    padding: DS.spacing.md,
+  },
+  savedCardName: {
+    ...DS.typography.h3,
+    color: DS.colors.textDark,
+    marginBottom: DS.spacing.xs,
+  },
+  savedCardMeta: {
+    ...DS.typography.metadata,
+    color: DS.colors.textGray,
+    fontSize: 12,
+  },
+  savedCardRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: DS.spacing.xs,
+  },
+  savedCardStar: {
+    fontSize: 12,
+    marginRight: 4,
+  },
+  savedCardRatingText: {
+    ...DS.typography.metadata,
+    color: DS.colors.textDark,
+    fontSize: 12,
+  },
+  emptyCard: {
+    width: (SCREEN_WIDTH - DS.spacing.lg * 2 - DS.spacing.md) / 2,
+    height: 180,
+    backgroundColor: DS.colors.surfaceLight,
+    borderRadius: DS.borderRadius.lg,
+    borderWidth: 2,
+    borderColor: DS.colors.border,
+    borderStyle: 'dashed',
+  },
+  emptyCardContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyCardText: {
+    ...DS.typography.body,
+    color: DS.colors.textGray,
+    marginTop: DS.spacing.sm,
+  },
+  unlockSection: {
+    paddingHorizontal: DS.spacing.lg,
+    marginBottom: DS.spacing.lg,
+  },
+  unlockCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: DS.colors.surfaceLight,
-    margin: DS.spacing.lg,
     padding: DS.spacing.lg,
     borderRadius: DS.borderRadius.lg,
   },
-  tipEmoji: {
-    fontSize: 24,
+  unlockIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: DS.borderRadius.full,
+    backgroundColor: DS.colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: DS.spacing.md,
   },
-  tipText: {
-    ...DS.typography.body,
-    color: DS.colors.textDark,
+  unlockContent: {
     flex: 1,
   },
-  createBoardButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: DS.colors.surface,
-    marginHorizontal: DS.spacing.lg,
-    marginBottom: DS.spacing.lg,
-    padding: DS.spacing.lg,
-    borderRadius: DS.borderRadius.lg,
-    borderWidth: 2,
-    borderColor: DS.colors.primaryOrange,
-    borderStyle: 'dashed',
+  unlockTitle: {
+    ...DS.typography.h3,
+    color: DS.colors.textDark,
+    marginBottom: DS.spacing.xs,
   },
-  createBoardText: {
+  unlockDescription: {
+    ...DS.typography.body,
+    color: DS.colors.textGray,
+    fontSize: 13,
+  },
+  discoverSection: {
+    paddingHorizontal: DS.spacing.lg,
+    paddingBottom: DS.spacing.xl,
+    alignItems: 'center',
+  },
+  discoverTitle: {
+    ...DS.typography.h3,
+    color: DS.colors.textDark,
+    marginBottom: DS.spacing.md,
+  },
+  exploreButton: {
+    backgroundColor: DS.colors.primaryOrange,
+    paddingHorizontal: DS.spacing.xxl,
+    paddingVertical: DS.spacing.md,
+    borderRadius: DS.borderRadius.full,
+  },
+  exploreButtonText: {
     ...DS.typography.button,
-    color: DS.colors.primaryOrange,
-    marginLeft: DS.spacing.sm,
+    color: DS.colors.textWhite,
   },
 
   // Growing collection

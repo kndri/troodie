@@ -173,44 +173,49 @@ export default function MapScreen() {
         );
       }
 
-      // Process restaurants with geocoding and additional data
-      const processedRestaurants = await Promise.all(
-        allRestaurants.map(async (restaurant) => {
-          const processed: MapRestaurant = {
-            ...restaurant,
-            isSaved: savedRestaurantIds.includes(restaurant.id),
-            friendsSaved: Math.floor(Math.random() * 8), // Mock data for now
-            isTrending: Math.random() > 0.85, // Mock data for now
-            hasActiveCampaign: userState.isCreator && Math.random() > 0.8, // Mock data for now
-            isNew: Math.random() > 0.9, // Mock data for now
-          };
+      // Process restaurants in smaller batches to avoid rate limiting
+      const BATCH_SIZE = 5;
+      const processedRestaurants: MapRestaurant[] = [];
 
-          // Geocode address if we don't have coordinates
-          if (!restaurant.latitude || !restaurant.longitude) {
-            if (restaurant.address) {
-              // Use cached geocoding to reduce API calls
-              const coords = await restaurantLocationService.getCachedCoordinates(restaurant.address);
-              if (coords) {
-                processed.coordinates = coords;
-                processed.latitude = coords.latitude;
-                processed.longitude = coords.longitude;
-                
-                // Update database asynchronously (don't wait)
-                restaurantLocationService.updateRestaurantCoordinates(
-                  restaurant.id, 
-                  coords
-                ).catch(console.error);
-              } else {
-                // Fallback to default Charlotte coordinates with some randomization
-                const defaultCoords = getDefaultCoordinates();
-                // Add small random offset to avoid all markers being in same spot
-                processed.coordinates = {
-                  latitude: defaultCoords.latitude + (Math.random() - 0.5) * 0.02,
-                  longitude: defaultCoords.longitude + (Math.random() - 0.5) * 0.02
-                };
-                processed.latitude = processed.coordinates.latitude;
-                processed.longitude = processed.coordinates.longitude;
-              }
+      for (let i = 0; i < allRestaurants.length; i += BATCH_SIZE) {
+        const batch = allRestaurants.slice(i, i + BATCH_SIZE);
+        const processedBatch = await Promise.all(
+          batch.map(async (restaurant) => {
+            const processed: MapRestaurant = {
+              ...restaurant,
+              isSaved: savedRestaurantIds.includes(restaurant.id),
+              friendsSaved: Math.floor(Math.random() * 8), // Mock data for now
+              isTrending: Math.random() > 0.85, // Mock data for now
+              hasActiveCampaign: userState.isCreator && Math.random() > 0.8, // Mock data for now
+              isNew: Math.random() > 0.9, // Mock data for now
+            };
+
+            // Geocode address if we don't have coordinates
+            if (!restaurant.latitude || !restaurant.longitude) {
+              if (restaurant.address) {
+                // Use cached geocoding to reduce API calls
+                const coords = await restaurantLocationService.getCachedCoordinates(restaurant.address);
+                if (coords) {
+                  processed.coordinates = coords;
+                  processed.latitude = coords.latitude;
+                  processed.longitude = coords.longitude;
+
+                  // Update database asynchronously (don't wait)
+                  restaurantLocationService.updateRestaurantCoordinates(
+                    restaurant.id,
+                    coords
+                  ).catch(console.error);
+                } else {
+                  // Fallback to default Charlotte coordinates with some randomization
+                  const defaultCoords = getDefaultCoordinates();
+                  // Add small random offset to avoid all markers being in same spot
+                  processed.coordinates = {
+                    latitude: defaultCoords.latitude + (Math.random() - 0.5) * 0.02,
+                    longitude: defaultCoords.longitude + (Math.random() - 0.5) * 0.02
+                  };
+                  processed.latitude = processed.coordinates.latitude;
+                  processed.longitude = processed.coordinates.longitude;
+                }
             } else {
               // No address, use default with randomization
               const defaultCoords = getDefaultCoordinates();
@@ -241,9 +246,11 @@ export default function MapScreen() {
             processed.distance = distance;
           }
 
-          return processed;
-        })
-      );
+            return processed;
+          })
+        );
+        processedRestaurants.push(...processedBatch);
+      }
 
       // Sort by distance by default
       processedRestaurants.sort((a, b) => (a.distance || 999) - (b.distance || 999));
@@ -458,7 +465,6 @@ export default function MapScreen() {
           <Text style={styles.listItemName} numberOfLines={1}>
             {item.name}
           </Text>
-          
           <View style={styles.listItemDetails}>
             <Text style={styles.listItemDetailsText} numberOfLines={1}>
               {item.cuisine_types?.[0] || 'Restaurant'} • {item.price_range || '$$'}
@@ -469,7 +475,6 @@ export default function MapScreen() {
               </Text>
             )}
           </View>
-          
           <View style={styles.listItemMeta}>
             {item.google_rating && (
               <View style={styles.listItemRating}>
@@ -477,14 +482,12 @@ export default function MapScreen() {
                 <Text style={styles.listItemRatingText}>{item.google_rating}</Text>
               </View>
             )}
-            
             {item.isSaved && (
               <View style={styles.listItemBadge}>
                 <Bookmark size={12} color={DS.colors.primaryOrange} fill={DS.colors.primaryOrange} />
                 <Text style={styles.listItemBadgeText}>Saved</Text>
               </View>
             )}
-            
             {item.friendsSaved && item.friendsSaved > 0 && (
               <View style={[styles.listItemBadge, { backgroundColor: '#EBF5FF' }]}>
                 <Users size={12} color="#3B82F6" />
@@ -493,7 +496,6 @@ export default function MapScreen() {
                 </Text>
               </View>
             )}
-            
             {item.isTrending && (
               <View style={[styles.listItemBadge, { backgroundColor: '#FEF2F2' }]}>
                 <Flame size={12} color="#EF4444" />
