@@ -1,8 +1,8 @@
+import { AddRestaurantModal } from '@/components/AddRestaurantModal';
 import { ErrorState } from '@/components/ErrorState';
 import { RestaurantCardSkeleton } from '@/components/LoadingSkeleton';
 import { PostCard } from '@/components/PostCard';
 import { RestaurantCard } from '@/components/cards/RestaurantCard';
-import { AddRestaurantModal } from '@/components/AddRestaurantModal';
 import { compactDesign, designTokens } from '@/constants/designTokens';
 import { DS } from '@/components/design-system/tokens';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,7 +11,7 @@ import { restaurantService } from '@/services/restaurantService';
 import { getErrorType } from '@/types/errors';
 import { PostWithUser } from '@/types/post';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Search, SlidersHorizontal, Users, Plus } from 'lucide-react-native';
+import { Plus, Search, SlidersHorizontal, Users } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Dimensions,
@@ -59,8 +59,8 @@ const useDebounce = (value: string, delay: number) => {
 };
 
 const useTabData = <T extends any>(
-  loadFn: () => Promise<T[]>,
-  filterFn: (items: T[], query: string) => T[],
+  loadFn: (searchQuery?: string) => Promise<T[]>,
+  filterFn?: (items: T[], query: string) => T[],
   shouldRandomize: boolean = false
 ) => {
   const [state, setState] = useState<TabState<T>>({
@@ -70,11 +70,11 @@ const useTabData = <T extends any>(
     error: null,
   });
 
-  const load = async () => {
+  const load = async (searchQuery?: string) => {
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const data = await loadFn();
-      const processedData = shouldRandomize ? shuffleArray(data) : data;
+      const data = await loadFn(searchQuery);
+      const processedData = shouldRandomize && !searchQuery ? shuffleArray(data) : data;
       setState({ data: processedData, filtered: processedData, loading: false, error: null });
     } catch (err: any) {
       setState(prev => ({ ...prev, loading: false, error: err }));
@@ -82,8 +82,15 @@ const useTabData = <T extends any>(
   };
 
   const filter = (query: string) => {
-    const filtered = query ? filterFn(state.data, query) : state.data;
-    setState(prev => ({ ...prev, filtered }));
+    // For restaurants, we'll reload with server-side search
+    // For posts, we'll still use client-side filtering
+    if (filterFn) {
+      const filtered = query ? filterFn(state.data, query) : state.data;
+      setState(prev => ({ ...prev, filtered }));
+    } else {
+      // Server-side search - reload data
+      load(query);
+    }
   };
 
   return { ...state, load, filter };
@@ -103,20 +110,11 @@ export default function ExploreScreen() {
   
   const debouncedSearch = useDebounce(searchQuery, 300);
 
-  // Restaurant data management with randomization - now showing ALL restaurants
+  // Restaurant data management with server-side search
   const restaurants = useTabData(
-    () => restaurantService.getAllRestaurants(100), // Increased limit to show more restaurants
-    (items, query) => {
-      const q = query.toLowerCase();
-      return items.filter(r => 
-        r.name?.toLowerCase().includes(q) ||
-        r.cuisine_types?.some((c: string) => c.toLowerCase().includes(q)) ||
-        r.city?.toLowerCase().includes(q) ||
-        r.state?.toLowerCase().includes(q) ||
-        r.address?.toLowerCase().includes(q)
-      );
-    },
-    true // Enable randomization for restaurants
+    (searchQuery?: string) => restaurantService.getRestaurantsForExplore(searchQuery, 200),
+    undefined, // No client-side filtering - using server-side search
+    true // Enable randomization for restaurants (only when no search query)
   );
 
   // Posts data management
@@ -164,7 +162,7 @@ export default function ExploreScreen() {
       if (activeTab === 'restaurants' && hasInitiallyLoaded) {
         const performReRandomization = async () => {
           setIsReRandomizing(true);
-          await restaurants.load();
+          await restaurants.load(); // Load without search query for re-randomization
           // Small delay to ensure smooth transition
           setTimeout(() => {
             setIsReRandomizing(false);
@@ -182,7 +180,12 @@ export default function ExploreScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await currentTab.load();
+    // For restaurants, reload with current search query; for posts, load normally
+    if (activeTab === 'restaurants') {
+      await restaurants.load(debouncedSearch);
+    } else {
+      await currentTab.load();
+    }
     
     // Ensure we mark as initially loaded after refresh
     if (activeTab === 'restaurants' && !hasInitiallyLoaded) {
@@ -387,7 +390,7 @@ export default function ExploreScreen() {
         onRestaurantAdded={(restaurant) => {
           // Reload the restaurants list after adding a new one
           if (activeTab === 'restaurants') {
-            restaurants.load();
+            restaurants.load(); // Load without search query to show all restaurants including the new one
           }
         }}
       />

@@ -1,3 +1,6 @@
+import { AddRestaurantModal } from '@/components/AddRestaurantModal';
+import { CommunitySelector } from '@/components/CommunitySelector';
+import { LinkInputModal } from '@/components/modals/LinkInputModal';
 import { designTokens } from '@/constants/designTokens';
 import { DEFAULT_IMAGES } from '@/constants/images';
 import { useApp } from '@/contexts/AppContext';
@@ -6,34 +9,30 @@ import { usePostForm } from '@/hooks/usePostForm';
 import { postMediaService } from '@/services/postMediaService';
 import { postService } from '@/services/postService';
 import { restaurantService } from '@/services/restaurantService';
+import { ToastService } from '@/services/toastService';
 import { RestaurantInfo } from '@/types/core';
 import { ExternalContent, PostCreationData } from '@/types/post';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Users } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    InputAccessoryView,
-    Keyboard,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  InputAccessoryView,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { AddRestaurantModal } from '@/components/AddRestaurantModal';
-import { CommunitySelector } from '@/components/CommunitySelector';
-import { LinkInputModal } from '@/components/modals/LinkInputModal';
-import { linkMetadataService } from '@/services/linkMetadataService';
-import { ToastService } from '@/services/toastService';
-import { Users } from 'lucide-react-native';
 
 type ContentType = 'original' | 'external';
 type AttachmentType = 'photo' | 'link' | 'restaurant' | 'rating' | 'details';
@@ -250,18 +249,13 @@ export default function CreatePostScreen() {
         // Update network progress
         await updateNetworkProgress('post');
 
-        // Show success toast and navigate back
-        ToastService.showSuccess('Post published successfully!', {
-          label: 'View',
-          onPress: () => {
-            router.push({
-              pathname: '/posts/[id]',
-              params: { id: post.id }
-            });
-          }
-        });
+        // Show success toast instead of full-screen confirmation
+        ToastService.success(
+          formData.postType === 'restaurant' ? 'Review posted!' : 'Posted!',
+          'Your post is now live in the community'
+        );
         
-        // Navigate back to previous screen (restaurant detail or home)
+        // Navigate back to previous screen (stays in context)
         router.back();
       }
 
@@ -391,7 +385,7 @@ export default function CreatePostScreen() {
         {/* Post Type Selector */}
         <View style={styles.postTypeSelector}>
           <View style={styles.postTypeLabelRow}>
-            <Text style={styles.postTypeLabel}>What would you like to share?</Text>
+            <Text style={styles.postTypeLabel}>Choose a post type</Text>
             <TouchableOpacity 
               onPress={() => setShowPostTypeInfo(true)}
               style={styles.infoButton}
@@ -405,7 +399,7 @@ export default function CreatePostScreen() {
               onPress={() => updateFormField('postType', 'simple')}
             >
               <Ionicons name="create-outline" size={20} color={formData.postType === 'simple' ? '#FFF' : designTokens.colors.textDark} />
-              <Text style={[styles.postTypeText, formData.postType === 'simple' && styles.postTypeTextActive]}>Share</Text>
+              <Text style={[styles.postTypeText, formData.postType === 'simple' && styles.postTypeTextActive]}>Share to Community</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.postTypeOption, formData.postType === 'restaurant' && styles.postTypeOptionActive]}
@@ -900,16 +894,16 @@ export default function CreatePostScreen() {
           <Text style={styles.infoModalTitle}>Post Types</Text>
           
           <View style={styles.infoOption}>
-            <Text style={styles.infoOptionTitle}>✍️ Share</Text>
+            <Text style={styles.infoOptionTitle}>✍️ Community Post</Text>
             <Text style={styles.infoOptionText}>
-              Share your thoughts, ask questions, or start discussions about food. Perfect for quick updates, food questions, or general food-related conversations without needing to review a specific restaurant.
+              Share thoughts, tips, or start discussions about food. Perfect for quick updates, recommendations, or general food conversations without rating a specific restaurant.
             </Text>
           </View>
           
           <View style={styles.infoOption}>
-            <Text style={styles.infoOptionTitle}>🍽️ Restaurant Review</Text>
+            <Text style={styles.infoOptionTitle}>🍽️ Write a Review</Text>
             <Text style={styles.infoOptionText}>
-              Write a detailed review of a restaurant you've visited. Rate your experience, add photos, and help others discover great places to eat.
+              Rate and review a specific restaurant you've visited. Include star ratings, detailed feedback, and photos to help others make dining decisions.
             </Text>
           </View>
         </View>
@@ -1948,6 +1942,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_600SemiBold',
     color: designTokens.colors.white,
   },
+
   keyboardAccessoryBar: {
     flexDirection: 'row',
     justifyContent: 'flex-end',

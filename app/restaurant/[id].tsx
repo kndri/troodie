@@ -26,6 +26,7 @@ import {
   Eye,
   Globe,
   MapPin,
+  MessageCircle,
   Phone,
   Share,
   Star,
@@ -486,9 +487,9 @@ export default function RestaurantDetailScreen() {
         )}
       </TouchableOpacity>
       
-      <TouchableOpacity style={styles.reviewButton} onPress={handleCreatePost}>
-        <Star size={18} color={designTokens.colors.white} fill={designTokens.colors.white} />
-        <Text style={styles.reviewButtonText}>Review</Text>
+      <TouchableOpacity style={styles.actionButton} onPress={handleCreatePost}>
+        <MessageCircle size={18} color={designTokens.colors.textDark} />
+        <Text style={styles.actionButtonText}>Write Review</Text>
       </TouchableOpacity>
     </View>
   );
